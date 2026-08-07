@@ -15,7 +15,7 @@ import selectors from '../../../selectors';
 import entryActions from '../../../entry-actions';
 import { usePopupInClosableContext } from '../../../hooks';
 import { isListArchiveOrTrash, isUserStatic } from '../../../utils/record-helpers';
-import { BoardMembershipRoles } from '../../../constants/Enums';
+import { BoardMembershipRoles, UserRoles } from '../../../constants/Enums';
 import { ClosableContext } from '../../../contexts';
 import Edit from './Edit';
 import TimeAgo from '../../common/TimeAgo';
@@ -38,10 +38,19 @@ const Item = React.memo(({ id }) => {
   );
 
   const { canEdit, canDelete } = useSelector((state) => {
-    const { listId } = selectors.selectCurrentCard(state);
-    const list = selectListById(state, listId);
+    const card = selectors.selectCurrentCard(state);
+    const list = selectListById(state, card.listId);
 
     if (isListArchiveOrTrash(list)) {
+      return {
+        canEdit: false,
+        canDelete: false,
+      };
+    }
+
+    // A locked card is read-only for everyone except instance admins.
+    const isAdmin = selectors.selectCurrentUser(state).role === UserRoles.ADMIN;
+    if (card.isLocked && !isAdmin) {
       return {
         canEdit: false,
         canDelete: false,

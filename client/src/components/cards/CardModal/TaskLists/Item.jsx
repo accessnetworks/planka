@@ -14,7 +14,7 @@ import { useToggle } from '../../../../lib/hooks';
 
 import selectors from '../../../../selectors';
 import { usePopupInClosableContext } from '../../../../hooks';
-import { BoardMembershipRoles } from '../../../../constants/Enums';
+import { BoardMembershipRoles, UserRoles } from '../../../../constants/Enums';
 import EditStep from './EditStep';
 import TaskList from '../../../task-lists/TaskList';
 
@@ -27,7 +27,12 @@ const Item = React.memo(({ id, index }) => {
 
   const canEdit = useSelector((state) => {
     const boardMembership = selectors.selectCurrentUserMembershipForCurrentBoard(state);
-    return !!boardMembership && boardMembership.role === BoardMembershipRoles.EDITOR;
+    const isEditor = !!boardMembership && boardMembership.role === BoardMembershipRoles.EDITOR;
+
+    // A locked card is read-only for everyone except instance admins.
+    const card = selectors.selectCurrentCard(state);
+    const isAdmin = selectors.selectCurrentUser(state).role === UserRoles.ADMIN;
+    return isEditor && (!card.isLocked || isAdmin);
   });
 
   const [isCompletedVisible, toggleCompletedVisible] = useToggle();

@@ -261,6 +261,13 @@
     width: 32px;
   }
 
+  .lockIcon {
+    color: #6b808c;
+    flex-shrink: 0;
+    font-size: 15px;
+    margin: 0 0 0 8px;
+  }
+
   .moduleWrapper {
     margin: 0 0 0 40px;
     position: relative;

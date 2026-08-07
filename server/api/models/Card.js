@@ -120,6 +120,11 @@
  *           default: false
  *           description: Whether the card is closed
  *           example: false
+ *         isLocked:
+ *           type: boolean
+ *           default: false
+ *           description: Whether the card is locked (read-only for non-admins)
+ *           example: false
  *         listChangedAt:
  *           type: string
  *           format: date-time
@@ -192,6 +197,11 @@ module.exports = {
       type: 'boolean',
       defaultsTo: false,
       columnName: 'is_closed',
+    },
+    isLocked: {
+      type: 'boolean',
+      defaultsTo: false,
+      columnName: 'is_locked',
     },
     listChangedAt: {
       type: 'ref',

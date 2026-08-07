@@ -14,7 +14,7 @@ import selectors from '../../../selectors';
 import entryActions from '../../../entry-actions';
 import { useSteps } from '../../../hooks';
 import { isListArchiveOrTrash } from '../../../utils/record-helpers';
-import { BoardMembershipRoles, CardTypes, ListTypes } from '../../../constants/Enums';
+import { BoardMembershipRoles, CardTypes, ListTypes, UserRoles } from '../../../constants/Enums';
 import SelectCardTypeStep from '../SelectCardTypeStep';
 import EditDueDateStep from '../EditDueDateStep';
 import EditStopwatchStep from '../EditStopwatchStep';
@@ -69,11 +69,18 @@ const CardActionsStep = React.memo(({ cardId, defaultStep, onNameEdit, onClose }
     canDelete,
     canUseMembers,
     canUseLabels,
+    canToggleLock,
   } = useSelector((state) => {
     const isManager = selectors.selectIsCurrentUserManagerForCurrentProject(state);
 
     const boardMembership = selectors.selectCurrentUserMembershipForCurrentBoard(state);
     const isEditor = !!boardMembership && boardMembership.role === BoardMembershipRoles.EDITOR;
+
+    // Only an instance admin can lock/unlock a card, and only an admin can
+    // change a locked card's own fields. Sub-resources (members, labels) stay
+    // editable for regular editors.
+    const isAdmin = selectors.selectCurrentUser(state).role === UserRoles.ADMIN;
+    const canEditCard = isEditor && (!card.isLocked || isAdmin);
 
     if (isListArchiveOrTrash(list)) {
       return {
@@ -82,31 +89,33 @@ const CardActionsStep = React.memo(({ cardId, defaultStep, onNameEdit, onClose }
         canEditDueDate: false,
         canEditStopwatch: false,
         canCopy: isManager || isEditor,
-        canCut: isEditor,
+        canCut: canEditCard,
         canDuplicate: false,
         canMove: false,
-        canRestore: isEditor,
-        canArchive: isEditor,
-        canDelete: isEditor,
+        canRestore: canEditCard,
+        canArchive: canEditCard,
+        canDelete: canEditCard,
         canUseMembers: false,
         canUseLabels: false,
+        canToggleLock: isAdmin,
       };
     }
 
     return {
-      canEditType: isEditor,
-      canEditName: isEditor,
-      canEditDueDate: isEditor,
-      canEditStopwatch: isEditor,
+      canEditType: canEditCard,
+      canEditName: canEditCard,
+      canEditDueDate: canEditCard,
+      canEditStopwatch: canEditCard,
       canCopy: isManager || isEditor,
-      canCut: isEditor,
+      canCut: canEditCard,
       canDuplicate: isEditor,
-      canMove: isEditor,
+      canMove: canEditCard,
       canRestore: null,
-      canArchive: isEditor,
-      canDelete: isEditor,
+      canArchive: canEditCard,
+      canDelete: canEditCard,
       canUseMembers: isEditor,
       canUseLabels: isEditor,
+      canToggleLock: isAdmin,
     };
   }, shallowEqual);
 
@@ -320,6 +329,16 @@ const CardActionsStep = React.memo(({ cardId, defaultStep, onNameEdit, onClose }
     openStep(StepTypes.DELETE);
   }, [openStep]);
 
+  const handleToggleLockClick = useCallback(() => {
+    dispatch(
+      entryActions.updateCard(cardId, {
+        isLocked: !card.isLocked,
+      }),
+    );
+
+    onClose();
+  }, [cardId, card.isLocked, onClose, dispatch]);
+
   if (step) {
     switch (step.type) {
       case StepTypes.MEMBERS:
@@ -483,6 +502,18 @@ const CardActionsStep = React.memo(({ cardId, defaultStep, onNameEdit, onClose }
               {t('action.moveCard', {
                 context: 'title',
               })}
+            </Menu.Item>
+          )}
+          {canToggleLock && (
+            <Menu.Item className={styles.menuItem} onClick={handleToggleLockClick}>
+              <Icon name={card.isLocked ? 'unlock' : 'lock'} className={styles.menuItemIcon} />
+              {card.isLocked
+                ? t('action.unlockCard', {
+                    context: 'title',
+                  })
+                : t('action.lockCard', {
+                    context: 'title',
+                  })}
             </Menu.Item>
           )}
           {prevList && canRestore && (

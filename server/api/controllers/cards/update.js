@@ -8,7 +8,7 @@
  * /cards/{id}:
  *   patch:
  *     summary: Update card
- *     description: Updates a card. Board editors can update all fields, viewers can only subscribe/unsubscribe.
+ *     description: Updates a card. Board editors can update all fields, viewers can only subscribe/unsubscribe. Admins can additionally lock/unlock a card; a locked card is read-only for non-admins.
  *     tags:
  *       - Cards
  *     operationId: updateCard
@@ -93,6 +93,10 @@
  *               isSubscribed:
  *                 type: boolean
  *                 description: Whether the current user is subscribed to the card
+ *               isLocked:
+ *                 type: boolean
+ *                 description: Whether the card is locked (read-only). Only admins can change this.
+ *                 example: false
  *     responses:
  *       200:
  *         description: Card updated successfully
@@ -195,6 +199,9 @@ module.exports = {
     isSubscribed: {
       type: 'boolean',
     },
+    isLocked: {
+      type: 'boolean',
+    },
   },
 
   exits: {
@@ -234,17 +241,25 @@ module.exports = {
     let { card } = pathToProject;
     const { list, board, project } = pathToProject;
 
+    // Instance admins can always manage the card (and are the only ones who
+    // can lock/unlock it), even on boards they are not a member of.
+    const isAdmin = currentUser.role === User.Roles.ADMIN;
+
     let boardMembership = await BoardMembership.qm.getOneByBoardIdAndUserId(
       board.id,
       currentUser.id,
     );
 
-    if (!boardMembership) {
+    if (!boardMembership && !isAdmin) {
       throw Errors.CARD_NOT_FOUND; // Forbidden
     }
 
+    const isEditor = isAdmin || boardMembership.role === BoardMembership.Roles.EDITOR;
+
     const availableInputKeys = ['id', 'isSubscribed'];
-    if (boardMembership.role === BoardMembership.Roles.EDITOR) {
+    // A locked card can only have its fields changed by an admin. Other editors
+    // keep read access and can still subscribe, but not edit the card itself.
+    if (isEditor && (!card.isLocked || isAdmin)) {
       availableInputKeys.push(
         'boardId',
         'listId',
@@ -257,6 +272,11 @@ module.exports = {
         'isDueCompleted',
         'stopwatch',
       );
+    }
+
+    // Locking/unlocking is an admin-only action.
+    if (isAdmin) {
+      availableInputKeys.push('isLocked');
     }
 
     if (_.difference(Object.keys(inputs), availableInputKeys).length > 0) {
@@ -317,6 +337,7 @@ module.exports = {
       'isDueCompleted',
       'stopwatch',
       'isSubscribed',
+      'isLocked',
     ]);
 
     card = await sails.helpers.cards.updateOne

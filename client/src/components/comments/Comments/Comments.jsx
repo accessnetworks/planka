@@ -11,7 +11,7 @@ import { Comment, Loader } from 'semantic-ui-react';
 import selectors from '../../../selectors';
 import entryActions from '../../../entry-actions';
 import { isListArchiveOrTrash } from '../../../utils/record-helpers';
-import { BoardMembershipRoles } from '../../../constants/Enums';
+import { BoardMembershipRoles, UserRoles } from '../../../constants/Enums';
 import Item from './Item';
 import Add from './Add';
 
@@ -24,10 +24,16 @@ const Comments = React.memo(() => {
   const { isCommentsFetching, isAllCommentsFetched } = useSelector(selectors.selectCurrentCard);
 
   const cadAdd = useSelector((state) => {
-    const { listId } = selectors.selectCurrentCard(state);
-    const list = selectListById(state, listId);
+    const card = selectors.selectCurrentCard(state);
+    const list = selectListById(state, card.listId);
 
     if (isListArchiveOrTrash(list)) {
+      return false;
+    }
+
+    // A locked card is read-only for everyone except instance admins.
+    const isAdmin = selectors.selectCurrentUser(state).role === UserRoles.ADMIN;
+    if (card.isLocked && !isAdmin) {
       return false;
     }
 

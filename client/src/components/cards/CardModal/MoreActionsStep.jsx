@@ -14,7 +14,7 @@ import selectors from '../../../selectors';
 import entryActions from '../../../entry-actions';
 import { useSteps } from '../../../hooks';
 import { isListArchiveOrTrash } from '../../../utils/record-helpers';
-import { BoardMembershipRoles } from '../../../constants/Enums';
+import { BoardMembershipRoles, UserRoles } from '../../../constants/Enums';
 import SelectCardTypeStep from '../SelectCardTypeStep';
 import MoveCardStep from '../MoveCardStep';
 
@@ -31,24 +31,31 @@ const MoreActionsStep = React.memo(({ onClose }) => {
   const card = useSelector(selectors.selectCurrentCard);
   const board = useSelector(selectors.selectCurrentBoard);
 
-  const { canEditType, canDuplicate, canMove } = useSelector((state) => {
+  const { canEditType, canDuplicate, canMove, canToggleLock } = useSelector((state) => {
     const list = selectListById(state, card.listId);
 
     const boardMembership = selectors.selectCurrentUserMembershipForCurrentBoard(state);
     const isEditor = !!boardMembership && boardMembership.role === BoardMembershipRoles.EDITOR;
 
+    // Only an instance admin can lock/unlock a card, and only an admin can
+    // change a locked card's own fields (moving, type, etc.).
+    const isAdmin = selectors.selectCurrentUser(state).role === UserRoles.ADMIN;
+    const canEditCard = isEditor && (!card.isLocked || isAdmin);
+
     if (isListArchiveOrTrash(list)) {
       return {
         canEditType: false,
         canDuplicate: false,
-        canMove: isEditor,
+        canMove: canEditCard,
+        canToggleLock: isAdmin,
       };
     }
 
     return {
-      canEditType: isEditor,
+      canEditType: canEditCard,
       canDuplicate: isEditor,
-      canMove: isEditor,
+      canMove: canEditCard,
+      canToggleLock: isAdmin,
     };
   }, shallowEqual);
 
@@ -78,6 +85,16 @@ const MoreActionsStep = React.memo(({ onClose }) => {
   const handleMoveClick = useCallback(() => {
     openStep(StepTypes.MOVE);
   }, [openStep]);
+
+  const handleToggleLockClick = useCallback(() => {
+    dispatch(
+      entryActions.updateCurrentCard({
+        isLocked: !card.isLocked,
+      }),
+    );
+
+    onClose();
+  }, [card.isLocked, onClose, dispatch]);
 
   if (step) {
     switch (step.type) {
@@ -130,6 +147,18 @@ const MoreActionsStep = React.memo(({ onClose }) => {
               {t('action.moveCard', {
                 context: 'title',
               })}
+            </Menu.Item>
+          )}
+          {canToggleLock && (
+            <Menu.Item className={styles.menuItem} onClick={handleToggleLockClick}>
+              <Icon name={card.isLocked ? 'unlock' : 'lock'} className={styles.menuItemIcon} />
+              {card.isLocked
+                ? t('action.unlockCard', {
+                    context: 'title',
+                  })
+                : t('action.lockCard', {
+                    context: 'title',
+                  })}
             </Menu.Item>
           )}
         </Menu>

@@ -103,6 +103,11 @@ module.exports = {
       }
     }
 
+    // A locked card is read-only for everyone except instance admins.
+    if (card.isLocked && currentUser.role !== User.Roles.ADMIN) {
+      throw Errors.NOT_ENOUGH_RIGHTS;
+    }
+
     comment = await sails.helpers.comments.deleteOne.with({
       project,
       board,

@@ -16,6 +16,9 @@ services:
       - DATABASE_URL=postgresql://postgres@postgres/planka
       - SECRET_KEY=notsecretkey
 
+      # Skip the "accept terms of service" step at login for all users.
+      - TERMS_DISABLED=true
+
       # - LOG_LEVEL=warn
 
       # - TRUST_PROXY=true
@@ -62,27 +65,24 @@ services:
       # - S3_FORCE_PATH_STYLE=true
       # - S3_REQUEST_CHECKSUM_CALCULATION=
 
-      # - OIDC_ISSUER=
-      # - OIDC_CLIENT_ID=
-      # - OIDC_CLIENT_SECRET=
-      # - OIDC_USE_OAUTH_CALLBACK=true
-      # - OIDC_ID_TOKEN_SIGNED_RESPONSE_ALG=
-      # - OIDC_USERINFO_SIGNED_RESPONSE_ALG=
-      # - OIDC_SCOPES=openid email profile
-      # - OIDC_RESPONSE_MODE=fragment
-      # - OIDC_USE_DEFAULT_RESPONSE_MODE=true
-      # - OIDC_ADMIN_ROLES=admin
-      # - OIDC_PROJECT_OWNER_ROLES=project_owner
-      # - OIDC_BOARD_USER_ROLES=board_user
-      # - OIDC_CLAIMS_SOURCE=userinfo
-      # - OIDC_EMAIL_ATTRIBUTE=email
-      # - OIDC_NAME_ATTRIBUTE=name
-      # - OIDC_USERNAME_ATTRIBUTE=preferred_username
-      # - OIDC_ROLES_ATTRIBUTE=groups
-      # - OIDC_IGNORE_USERNAME=true
-      # - OIDC_IGNORE_ROLES=true
+      # Single sign-on via OIDC (Authentik — the same IdP RavAN uses).
+      # Secrets are pulled from a local, git-ignored .env file so the client
+      # secret is never committed; see .env.example for what to fill in.
+      # OIDC stays disabled until OIDC_ISSUER is set (empty issuer = off), so
+      # local login keeps working out of the box.
+      #
+      # New SSO users are auto-provisioned in the local Postgres DB. With
+      # OIDC_IGNORE_ROLES=true every SSO user is created (and kept) as the
+      # "boardUser" role — Authentik groups can never escalate them to
+      # project owner or admin. This is the "just board user perms" behavior.
+      - OIDC_ISSUER=${OIDC_ISSUER:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - OIDC_SCOPES=${OIDC_SCOPES:-openid email profile}
+      - OIDC_IGNORE_ROLES=true
+      # Uncomment to hide the local login form and force SSO-only sign-in:
       # - OIDC_ENFORCED=true
-      # - OIDC_TIMEOUT=3500
+      # Uncomment for verbose OIDC logs while setting this up:
       # - OIDC_DEBUG=true
 
       # Email Notifications (https://nodemailer.com/smtp/)

@@ -12,7 +12,7 @@ import { Icon } from 'semantic-ui-react';
 
 import selectors from '../../../../selectors';
 import Paths from '../../../../constants/Paths';
-import Linkify from '../../../common/Linkify';
+import InlineMarkdown from '../../../common/InlineMarkdown';
 
 import styles from './Task.module.scss';
 
@@ -43,7 +43,7 @@ const Task = React.memo(({ id }) => {
         </>
       ) : (
         <span className={classNames(styles.name, task.isCompleted && styles.nameCompleted)}>
-          <Linkify linkStopPropagation>{task.name}</Linkify>
+          <InlineMarkdown linkStopPropagation>{task.name}</InlineMarkdown>
         </span>
       )}
     </li>

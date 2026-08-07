@@ -472,6 +472,8 @@ export default {
       makeProjectPrivate_title: 'Make Project Private',
       makeProjectShared: 'Make project shared',
       makeProjectShared_title: 'Make Project Shared',
+      lockCard_title: 'Lock Card',
+      unlockCard_title: 'Unlock Card',
       move: 'Move',
       moveCard_title: 'Move Card',
       moveList_title: 'Move List',

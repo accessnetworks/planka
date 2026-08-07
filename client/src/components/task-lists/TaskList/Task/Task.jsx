@@ -23,7 +23,7 @@ import Paths from '../../../../constants/Paths';
 import EditName from './EditName';
 import SelectAssigneeStep from './SelectAssigneeStep';
 import ActionsStep from './ActionsStep';
-import Linkify from '../../../common/Linkify';
+import InlineMarkdown from '../../../common/InlineMarkdown';
 import UserAvatar from '../../../users/UserAvatar';
 
 import styles from './Task.module.scss';
@@ -181,7 +181,7 @@ const Task = React.memo(({ id, index }) => {
                           task.isCompleted && styles.nameCompleted,
                         )}
                       >
-                        <Linkify linkStopPropagation>{task.name}</Linkify>
+                        <InlineMarkdown linkStopPropagation>{task.name}</InlineMarkdown>
                       </span>
                     )}
                   </span>

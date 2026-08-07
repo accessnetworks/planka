@@ -147,6 +147,11 @@ module.exports = {
       throw Errors.NOT_ENOUGH_RIGHTS;
     }
 
+    // A locked card is read-only for everyone except instance admins.
+    if (card && card.isLocked && currentUser.role !== User.Roles.ADMIN) {
+      throw Errors.NOT_ENOUGH_RIGHTS;
+    }
+
     let linkedCard;
     if (!_.isUndefined(inputs.linkedCardId)) {
       const path = await sails.helpers.cards

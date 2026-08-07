@@ -80,16 +80,24 @@ module.exports = {
     let { card } = pathToProject;
     const { list, board, project } = pathToProject;
 
+    const isAdmin = currentUser.role === User.Roles.ADMIN;
+
     const boardMembership = await BoardMembership.qm.getOneByBoardIdAndUserId(
       board.id,
       currentUser.id,
     );
 
-    if (!boardMembership) {
+    if (!boardMembership && !isAdmin) {
       throw Errors.CARD_NOT_FOUND; // Forbidden
     }
 
-    if (boardMembership.role !== BoardMembership.Roles.EDITOR) {
+    if (!isAdmin && boardMembership.role !== BoardMembership.Roles.EDITOR) {
+      throw Errors.NOT_ENOUGH_RIGHTS;
+    }
+
+    // A locked card is protected from deletion — only an admin can remove it
+    // (after unlocking, or directly).
+    if (card.isLocked && !isAdmin) {
       throw Errors.NOT_ENOUGH_RIGHTS;
     }
 

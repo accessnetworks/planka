@@ -23,6 +23,7 @@ export default class extends BaseModel {
     isDueCompleted: attr(),
     stopwatch: attr(),
     isClosed: attr(),
+    isLocked: attr(),
     commentsTotal: attr({
       getDefault: () => 0,
     }),

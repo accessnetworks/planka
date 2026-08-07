@@ -44,9 +44,13 @@ module.exports = {
   async fn(inputs) {
     const internalConfig = await InternalConfig.qm.getOneMain();
 
+    // When terms are disabled, an admin login initializes the instance
+    // outright — there is no signature to wait for.
+    const { termsDisabled } = sails.config.custom;
+
     if (!internalConfig.isInitialized) {
       if (inputs.user.role === User.Roles.ADMIN) {
-        if (inputs.user.termsSignature) {
+        if (termsDisabled || inputs.user.termsSignature) {
           await InternalConfig.qm.updateOneMain({
             isInitialized: true,
           });
@@ -56,7 +60,7 @@ module.exports = {
       }
     }
 
-    if (!sails.hooks.terms.isSignatureValid(inputs.user.termsSignature)) {
+    if (!termsDisabled && !sails.hooks.terms.isSignatureValid(inputs.user.termsSignature)) {
       const { token: pendingToken, payload: pendingTokenPayload } =
         sails.helpers.utils.createJwtToken(
           AccessTokenSteps.ACCEPT_TERMS,

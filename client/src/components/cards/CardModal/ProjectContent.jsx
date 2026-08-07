@@ -15,7 +15,7 @@ import entryActions from '../../../entry-actions';
 import { usePopupInClosableContext } from '../../../hooks';
 import { startStopwatch, stopStopwatch } from '../../../utils/stopwatch';
 import { isUsableMarkdownElement } from '../../../utils/element-helpers';
-import { BoardMembershipRoles, CardTypes, ListTypes } from '../../../constants/Enums';
+import { BoardMembershipRoles, CardTypes, ListTypes, UserRoles } from '../../../constants/Enums';
 import { CardTypeIcons } from '../../../constants/Icons';
 import { ClosableContext } from '../../../contexts';
 import NameField from './NameField';
@@ -95,6 +95,12 @@ const ProjectContent = React.memo(() => {
       isEditor = boardMembership.role === BoardMembershipRoles.EDITOR;
     }
 
+    // A locked card can only have its own fields changed by an instance admin.
+    // Sub-resources (tasks, attachments, members, labels, comments) stay
+    // editable for regular editors.
+    const isAdmin = selectors.selectCurrentUser(state).role === UserRoles.ADMIN;
+    const canEditCard = isEditor && (!card.isLocked || isAdmin);
+
     if (isInArchiveList || isInTrashList) {
       return {
         canEditType: false,
@@ -105,11 +111,11 @@ const ProjectContent = React.memo(() => {
         canSubscribe: isMember,
         canJoin: false,
         canDuplicate: false,
-        canMove: isEditor,
-        canRestore: isEditor,
-        canArchive: isEditor,
-        canDelete: isEditor,
-        canUseLists: isEditor,
+        canMove: canEditCard,
+        canRestore: canEditCard,
+        canArchive: canEditCard,
+        canDelete: canEditCard,
+        canUseLists: canEditCard,
         canUseMembers: false,
         canUseLabels: false,
         canAddTaskList: false,
@@ -119,24 +125,24 @@ const ProjectContent = React.memo(() => {
     }
 
     return {
-      canEditType: isEditor,
-      canEditName: isEditor,
-      canEditDescription: isEditor,
-      canEditDueDate: isEditor,
-      canEditStopwatch: isEditor,
+      canEditType: canEditCard,
+      canEditName: canEditCard,
+      canEditDescription: canEditCard,
+      canEditDueDate: canEditCard,
+      canEditStopwatch: canEditCard,
       canSubscribe: isMember,
-      canJoin: isEditor,
+      canJoin: canEditCard,
       canDuplicate: isEditor,
-      canMove: isEditor,
+      canMove: canEditCard,
       canRestore: null,
-      canArchive: isEditor,
-      canDelete: isEditor,
-      canUseLists: isEditor,
-      canUseMembers: isEditor,
-      canUseLabels: isEditor,
-      canAddTaskList: isEditor,
-      canAddAttachment: isEditor,
-      canAddCustomFieldGroup: isEditor,
+      canArchive: canEditCard,
+      canDelete: canEditCard,
+      canUseLists: canEditCard,
+      canUseMembers: canEditCard,
+      canUseLabels: canEditCard,
+      canAddTaskList: canEditCard,
+      canAddAttachment: canEditCard,
+      canAddCustomFieldGroup: canEditCard,
     };
   }, shallowEqual);
 
@@ -305,7 +311,10 @@ const ProjectContent = React.memo(() => {
               {canEditName ? (
                 <NameField defaultValue={card.name} onUpdate={handleNameUpdate} />
               ) : (
-                <div className={styles.headerTitle}>{card.name}</div>
+                <div className={styles.headerTitle}>
+                  {card.name}
+                  {card.isLocked && <Icon name="lock" className={styles.lockIcon} />}
+                </div>
               )}
             </div>
           </div>

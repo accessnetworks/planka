@@ -14,7 +14,7 @@ import { useDidUpdate } from '../../../lib/hooks';
 import selectors from '../../../selectors';
 import { isListArchiveOrTrash } from '../../../utils/record-helpers';
 import DroppableTypes from '../../../constants/DroppableTypes';
-import { BoardMembershipRoles } from '../../../constants/Enums';
+import { BoardMembershipRoles, UserRoles } from '../../../constants/Enums';
 import { ClosableContext } from '../../../contexts';
 import Task from './Task';
 import AddTask from './AddTask';
@@ -30,15 +30,19 @@ const TaskList = React.memo(({ id, isCompletedVisible }) => {
   const tasks = useSelector((state) => selectTasksByTaskListId(state, id));
 
   const canEdit = useSelector((state) => {
-    const { listId } = selectors.selectCurrentCard(state);
-    const list = selectListById(state, listId);
+    const card = selectors.selectCurrentCard(state);
+    const list = selectListById(state, card.listId);
 
     if (isListArchiveOrTrash(list)) {
       return false;
     }
 
     const boardMembership = selectors.selectCurrentUserMembershipForCurrentBoard(state);
-    return !!boardMembership && boardMembership.role === BoardMembershipRoles.EDITOR;
+    const isEditor = !!boardMembership && boardMembership.role === BoardMembershipRoles.EDITOR;
+
+    // A locked card is read-only for everyone except instance admins.
+    const isAdmin = selectors.selectCurrentUser(state).role === UserRoles.ADMIN;
+    return isEditor && (!card.isLocked || isAdmin);
   });
 
   const [t] = useTranslation();

@@ -117,6 +117,7 @@ module.exports.custom = {
 
   internalAccessToken: process.env.INTERNAL_ACCESS_TOKEN,
   termsType: process.env.TERMS_TYPE || 'custom',
+  termsDisabled: process.env.TERMS_DISABLED === 'true',
   customerPanelUrl: process.env.CUSTOMER_PANEL_URL,
   demoMode: process.env.DEMO_MODE === 'true',
 };
