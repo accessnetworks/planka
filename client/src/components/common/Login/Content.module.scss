@@ -40,6 +40,24 @@
     justify-content: center;
   }
 
+  .ssoRedirectMessage {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .ssoRedirectCancelButton {
+    background: transparent;
+    border: none;
+    color: #2185d0;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 0;
+    text-decoration: underline;
+    white-space: nowrap;
+  }
+
   .formTitle {
     font-size: 36px;
     font-weight: bold;

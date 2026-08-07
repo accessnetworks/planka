@@ -118,6 +118,14 @@ export function* updateHomeView(value) {
 export function* logout(revokeAccessToken) {
   yield call(removeAccessToken);
 
+  // Suppress the login page's automatic SSO redirect for the rest of this
+  // browser session so signing out doesn't immediately bounce back into SSO.
+  try {
+    window.sessionStorage.setItem('oidcAutoRedirectDisabled', '1');
+  } catch {
+    /* empty */
+  }
+
   if (revokeAccessToken) {
     yield put(actions.logout.revokeAccessToken());
 
