@@ -3,6 +3,9 @@ docker-compose.override.yml
 .idea
 .DS_Store
 
+# Local database backups (postgres-backup service)
+backups/
+
 node_modules
 
 # Prevent another lockfile than package-lock.json (npm) from being created

@@ -134,5 +134,47 @@ services:
       retries: 15
       start_period: 10s
 
+  # Automatic Postgres backups. Takes a gzipped pg_dump of the `planka`
+  # database on startup and then every BACKUP_INTERVAL seconds, writing to the
+  # host ./backups directory and pruning to the newest BACKUP_KEEP dumps.
+  # Restore with:
+  #   gunzip -c ./backups/planka-<timestamp>.sql.gz \
+  #     | docker compose -f docker-compose-dev.yml exec -T postgres psql -U postgres -d planka
+  postgres-backup:
+    image: postgres:16-alpine
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backups:/backups
+    environment:
+      - PGHOST=postgres
+      - PGUSER=postgres
+      - PGDATABASE=planka
+      # How often to back up (seconds; default 6h) and how many dumps to keep.
+      - BACKUP_INTERVAL=21600
+      - BACKUP_KEEP=14
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "postgres-backup: every $${BACKUP_INTERVAL}s, keeping $${BACKUP_KEEP} dumps in /backups"
+        while true; do
+          ts=$$(date -u +%Y%m%dT%H%M%SZ)
+          out="/backups/planka-$${ts}.sql.gz"
+          echo "postgres-backup: dumping to $${out}"
+          if pg_dump --clean --if-exists | gzip -c > "$${out}.tmp"; then
+            mv "$${out}.tmp" "$${out}"
+            echo "postgres-backup: wrote $${out}"
+          else
+            echo "postgres-backup: dump FAILED"
+            rm -f "$${out}.tmp"
+          fi
+          stale=$$(ls -1t /backups/planka-*.sql.gz 2>/dev/null | tail -n +$$(($${BACKUP_KEEP} + 1)))
+          [ -n "$${stale}" ] && echo "$${stale}" | xargs rm -f
+          sleep "$${BACKUP_INTERVAL}"
+        done
+
 volumes:
   db-data:
