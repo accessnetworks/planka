@@ -47,6 +47,24 @@ module.exports.custom = {
   maxUploadFileSize: envToBytes(process.env.MAX_UPLOAD_FILE_SIZE),
   tokenExpiresIn: (parseInt(process.env.TOKEN_EXPIRES_IN, 10) || 365) * 24 * 60 * 60,
 
+  // A second factor needs a harder stop than a time window: six digits fall to
+  // patience alone. After this many wrong codes the pending session is
+  // destroyed and the login starts over from the password, so the ten minutes
+  // a pending token is valid for stop being ten minutes of free guessing.
+  totpMaxAttempts: parseInt(process.env.TOTP_MAX_ATTEMPTS, 10) || 5,
+
+  // Ceiling on sign-in attempts, counted per client address and per account.
+  // The two attacks look different: one source working through many accounts is
+  // caught by the first, many sources working on one account by the second.
+  //
+  // Counted in the process that serves the request, not in shared storage —
+  // PLANKA needs no Redis, and the stock deployment is a single container. Run
+  // several and each keeps its own count, so the effective ceiling multiplies
+  // by the number of processes. Put a limiter in your proxy if that matters.
+  authRateLimitWindow: parseInt(process.env.AUTH_RATE_LIMIT_WINDOW, 10) || 60,
+  authRateLimitMaxPerIp: parseInt(process.env.AUTH_RATE_LIMIT_MAX_PER_IP, 10) || 30,
+  authRateLimitMaxPerIdentifier: parseInt(process.env.AUTH_RATE_LIMIT_MAX_PER_IDENTIFIER, 10) || 10,
+
   storageLimit: envToBytes(process.env.STORAGE_LIMIT),
   activeUsersLimit: envToNumber(process.env.ACTIVE_USERS_LIMIT),
 
@@ -73,34 +91,6 @@ module.exports.custom = {
   s3Bucket: process.env.S3_BUCKET,
   s3ForcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
   s3RequestChecksumCalculation: process.env.S3_REQUEST_CHECKSUM_CALCULATION,
-
-  oidcIssuer: process.env.OIDC_ISSUER,
-  oidcClientId: process.env.OIDC_CLIENT_ID,
-  oidcClientSecret: process.env.OIDC_CLIENT_SECRET,
-  oidcUseOauthCallback: process.env.OIDC_USE_OAUTH_CALLBACK === 'true',
-  oidcIdTokenSignedResponseAlg: process.env.OIDC_ID_TOKEN_SIGNED_RESPONSE_ALG,
-  oidcUserinfoSignedResponseAlg: process.env.OIDC_USERINFO_SIGNED_RESPONSE_ALG,
-  oidcScopes: process.env.OIDC_SCOPES || 'openid email profile',
-  oidcResponseMode: process.env.OIDC_RESPONSE_MODE || 'fragment',
-  oidcUseDefaultResponseMode: process.env.OIDC_USE_DEFAULT_RESPONSE_MODE === 'true',
-  oidcAdminRoles: envToArray(process.env.OIDC_ADMIN_ROLES),
-  oidcProjectOwnerRoles: envToArray(process.env.OIDC_PROJECT_OWNER_ROLES),
-  oidcBoardUserRoles: envToArray(process.env.OIDC_BOARD_USER_ROLES),
-  oidcClaimsSource: process.env.OIDC_CLAIMS_SOURCE || 'userinfo',
-  oidcEmailAttribute: process.env.OIDC_EMAIL_ATTRIBUTE || 'email',
-  oidcNameAttribute: process.env.OIDC_NAME_ATTRIBUTE || 'name',
-  oidcUsernameAttribute: process.env.OIDC_USERNAME_ATTRIBUTE || 'preferred_username',
-  oidcRolesAttribute: process.env.OIDC_ROLES_ATTRIBUTE || 'groups',
-  oidcIgnoreUsername: process.env.OIDC_IGNORE_USERNAME === 'true',
-  oidcIgnoreRoles: process.env.OIDC_IGNORE_ROLES === 'true',
-  oidcEnforced: process.env.OIDC_ENFORCED === 'true',
-  oidcTimeout: envToNumber(process.env.OIDC_TIMEOUT),
-  oidcDebug: process.env.OIDC_DEBUG === 'true',
-
-  // TODO: move client base url to environment variable?
-  oidcRedirectUri: `${
-    sails.config.environment === 'production' ? baseUrl : 'http://localhost:3000'
-  }/oidc-callback`,
 
   smtpHost: process.env.SMTP_HOST,
   smtpPort: process.env.SMTP_PORT || 587,

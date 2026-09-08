@@ -88,14 +88,28 @@ const serveStatic = async (prefix, getPathSegment, req, res) => {
   return serveStatic(prefix, getPathSegment, req, res);
 }; */
 
-const protectedStaticDirServer = (prefix, getPathSegment) => (req, res, next) => {
+// Avatars, background images and favicons. These used to check the token's
+// signature and nothing else, which meant a revoked session, a deactivated
+// account or a changed password all kept working here for as long as the
+// signature lasted — a year by default. They now ask the same question the API
+// asks, through the same helper.
+const protectedStaticDirServer = (prefix, getPathSegment) => async (req, res, next) => {
   if (!req.url.startsWith(prefix)) {
     return next();
   }
 
-  try {
-    sails.helpers.utils.verifyJwtToken(req.cookies.accessToken);
-  } catch (error) {
+  const { accessToken, httpOnlyToken } = req.cookies;
+
+  if (!accessToken) {
+    return res.sendStatus(401);
+  }
+
+  const sessionAndUser = await sails.helpers.utils.resolveAccessToken.with({
+    accessToken,
+    httpOnlyToken: httpOnlyToken || null,
+  });
+
+  if (!sessionAndUser) {
     return res.sendStatus(401);
   }
 
@@ -117,8 +131,7 @@ module.exports.routes = {
   'DELETE /api/webhooks/:id': 'webhooks/delete',
 
   'POST /api/access-tokens': 'access-tokens/create',
-  'POST /api/access-tokens/exchange-with-oidc': 'access-tokens/exchange-with-oidc',
-  'POST /api/access-tokens/debug-oidc': 'access-tokens/debug-oidc',
+  'POST /api/access-tokens/verify-totp': 'access-tokens/verify-totp',
   'POST /api/access-tokens/accept-terms': 'access-tokens/accept-terms',
   'POST /api/access-tokens/revoke-pending-token': 'access-tokens/revoke-pending-token',
   'DELETE /api/access-tokens/me': 'access-tokens/delete',
@@ -132,6 +145,12 @@ module.exports.routes = {
   'PATCH /api/users/:id/username': 'users/update-username',
   'POST /api/users/:id/avatar': 'users/update-avatar',
   'POST /api/users/:id/api-key': 'users/create-api-key',
+  'POST /api/users/:id/totp/setup': 'users/setup-totp',
+  'POST /api/users/:id/totp/enable': 'users/enable-totp',
+  'DELETE /api/users/:id/totp': 'users/disable-totp',
+  'POST /api/users/:id/totp/recovery-codes': 'users/regenerate-totp-recovery-codes',
+  'GET /api/users/:id/trusted-devices': 'users/index-trusted-devices',
+  'DELETE /api/users/:id/trusted-devices/:deviceId': 'users/delete-trusted-device',
   'DELETE /api/users/:id': 'users/delete',
 
   'GET /api/projects': 'projects/index',

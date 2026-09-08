@@ -12,11 +12,6 @@ const authenticate = (data) => ({
   },
 });
 
-const authenticateWithOidc = () => ({
-  type: EntryActionTypes.WITH_OIDC_AUTHENTICATE,
-  payload: {},
-});
-
 const clearAuthenticateError = () => ({
   type: EntryActionTypes.AUTHENTICATE_ERROR_CLEAR,
   payload: {},
@@ -41,11 +36,24 @@ const updateTermsLanguage = (value) => ({
   },
 });
 
+const verifyTotp = (data) => ({
+  type: EntryActionTypes.TOTP_VERIFY,
+  payload: {
+    data,
+  },
+});
+
+const cancelTotpChallenge = () => ({
+  type: EntryActionTypes.TOTP_CHALLENGE_CANCEL,
+  payload: {},
+});
+
 export default {
   authenticate,
-  authenticateWithOidc,
   clearAuthenticateError,
   acceptTerms,
   cancelTerms,
   updateTermsLanguage,
+  verifyTotp,
+  cancelTotpChallenge,
 };

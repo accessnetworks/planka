@@ -17,6 +17,8 @@ module.exports = {
   },
 
   fn(inputs) {
+    const recoveryCodes = inputs.record.totpRecoveryCodes;
+
     const data = {
       ..._.omit(inputs.record, [
         'password',
@@ -26,6 +28,8 @@ module.exports = {
         'passwordChangedAt',
         'apiKeyCreatedAt',
         'termsAcceptedAt',
+        'totpSecret',
+        'totpRecoveryCodes',
       ]),
       avatar: inputs.record.avatar && {
         url: `${sails.config.custom.baseUrl}/user-avatars/${inputs.record.avatar.uploadedFileId}/original.${inputs.record.avatar.extension}`,
@@ -34,6 +38,7 @@ module.exports = {
         },
       },
       language: inputs.record.language || sails.config.i18n.defaultLocale,
+      totpRecoveryCodesRemaining: Array.isArray(recoveryCodes) ? recoveryCodes.length : 0,
     };
 
     const gravatarUrl = sails.helpers.users.buildGravatarUrl(inputs.record);
@@ -52,23 +57,8 @@ module.exports = {
         const lockedFieldNames = [];
         if (sails.config.custom.demoMode) {
           lockedFieldNames.push('email', 'password', 'role', 'name', 'username');
-        } else if (isDefaultAdmin || inputs.record.isSsoUser) {
-          lockedFieldNames.push('email', 'password', 'name');
-
-          if (isDefaultAdmin) {
-            lockedFieldNames.push('role', 'username');
-          } else if (inputs.record.isSsoUser) {
-            if (!sails.config.custom.oidcIgnoreRoles) {
-              lockedFieldNames.push('role');
-            }
-            if (!sails.config.custom.oidcIgnoreUsername) {
-              lockedFieldNames.push('username');
-            }
-          }
-        }
-
-        if (sails.config.custom.oidcEnforced) {
-          lockedFieldNames.push('isSsoUser');
+        } else if (isDefaultAdmin) {
+          lockedFieldNames.push('email', 'password', 'name', 'role', 'username');
         }
 
         Object.assign(data, {
@@ -83,7 +73,11 @@ module.exports = {
         return _.omit(data, User.PERSONAL_FIELD_NAMES);
       }
 
-      return _.omit(data, [...User.PRIVATE_FIELD_NAMES, ...User.PERSONAL_FIELD_NAMES]);
+      return _.omit(data, [
+        ...User.PRIVATE_FIELD_NAMES,
+        ...User.PERSONAL_FIELD_NAMES,
+        ...User.TWO_FACTOR_VISIBLE_FIELD_NAMES,
+      ]);
     }
 
     return data;

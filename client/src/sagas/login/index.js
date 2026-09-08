@@ -17,7 +17,7 @@ export default function* loginSaga() {
 
   yield take([
     ActionTypes.AUTHENTICATE__SUCCESS,
-    ActionTypes.WITH_OIDC_AUTHENTICATE__SUCCESS,
+    ActionTypes.TOTP_VERIFY__SUCCESS,
     ActionTypes.TERMS_ACCEPT__SUCCESS,
   ]);
 

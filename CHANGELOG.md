@@ -1,4 +1,55 @@
-# [2.1.1] - 2026-04-18
+## [Unreleased]
+
+### Security
+
+* Limit sign-in attempts per client address and per account
+* Destroy the pending session after repeated wrong two-factor codes, so a pending token can no longer be guessed against for its full lifetime
+* Check the session, the account status and the password age — not only the token signature — before serving avatars, background images and favicons, so a revoked token no longer works there
+* Refuse server-side fetches to private, loopback and link-local addresses when a link attachment's favicon is retrieved
+* Warn on every start while `SECRET_KEY` is missing, too short, or still the value from the example configuration
+* Encrypt the backup archive when `BACKUP_PASSPHRASE` is set, and say what an unencrypted one contains
+
+### Added
+
+* Add `db:clean-orphaned-records` script to report and remove reference rows left behind by an incomplete delete
+
+### Fixed
+
+* Fix a blank home view when a project manager or board membership points at a project that no longer exists
+* Fix endless list pagination returning an error for cursors Postgres cannot read as a timestamp
+* Fix endless list pagination skipping and repeating cards when a search, member or label filter is active
+
+## [2.2.1] - 2026-08-10
+
+### Fixed
+
+* Fix path traversal in the static file routes that allowed authenticated users to read arbitrary files from the server
+
+## [2.2.0] - 2026-08-09
+
+### ⚠️ Breaking changes
+
+* OIDC/SSO has been removed and is now part of PLANKA Pro
+* **All SSO-based users have been deactivated**, since they no longer have a password login — an admin can set a password for each of them and reactivate them
+* Node.js 24 is now required for source and manual installations (Docker users are unaffected)
+
+### Added
+
+* Add two-factor authentication via TOTP, with recovery codes and admin reset
+* Add configurable auto logout on inactivity, with a warning before sign-out
+* Add trusted devices to skip two-factor authentication for a set period
+
+### Changed
+
+* Replace user edit popups in administration with a single modal
+* Update dependencies and align CI with Node 24
+
+### Removed
+
+* Remove OIDC and SSO support (moved to PLANKA Pro)
+* Remove armv7 Docker image builds
+
+## [2.1.1] - 2026-04-18
 
 ### Added
 

@@ -4,12 +4,11 @@
  */
 
 import isEmail from 'validator/lib/isEmail';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import classNames from 'classnames';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation, Trans } from 'react-i18next';
-import TextareaAutosize from 'react-textarea-autosize';
-import { Button, Divider, Form, Grid, Header, Message, TextArea } from 'semantic-ui-react';
+import { Form, Grid, Header, Message } from 'semantic-ui-react';
 import { useDidUpdate, usePrevious, useToggle } from '../../../lib/hooks';
 import { Input } from '../../../lib/custom-ui';
 
@@ -19,35 +18,13 @@ import { useForm, useNestedRef } from '../../../hooks';
 import { isUsername } from '../../../utils/validator';
 import AccessTokenSteps from '../../../constants/AccessTokenSteps';
 import TermsModal from './TermsModal';
+import TotpChallengeModal from './TotpChallengeModal';
 
 import logo from '../../../assets/images/logo.png';
 
 import styles from './Content.module.scss';
 
-// How long to wait on the login page before redirecting to SSO, giving the
-// user a chance to sign in with a local account instead.
-const OIDC_AUTO_REDIRECT_SECONDS = 3;
-// Session flag that suppresses the auto-redirect (set when the user cancels it
-// or logs out) so it doesn't loop or override an explicit choice.
-const OIDC_AUTO_REDIRECT_DISABLED_KEY = 'oidcAutoRedirectDisabled';
-
-const isOidcAutoRedirectDisabled = () => {
-  try {
-    return !!window.sessionStorage.getItem(OIDC_AUTO_REDIRECT_DISABLED_KEY);
-  } catch {
-    return false;
-  }
-};
-
-const disableOidcAutoRedirect = () => {
-  try {
-    window.sessionStorage.setItem(OIDC_AUTO_REDIRECT_DISABLED_KEY, '1');
-  } catch {
-    /* empty */
-  }
-};
-
-const createMessage = (error, isDebug) => {
+const createMessage = (error) => {
   if (!error) {
     return error;
   }
@@ -67,11 +44,6 @@ const createMessage = (error, isDebug) => {
       return {
         type: 'error',
         content: 'common.invalidPassword',
-      };
-    case 'Use single sign-on':
-      return {
-        type: 'error',
-        content: 'common.useSingleSignOn',
       };
     case 'Admin login required to initialize instance':
       return {
@@ -106,7 +78,7 @@ const createMessage = (error, isDebug) => {
     default:
       return {
         type: 'warning',
-        content: isDebug ? error.message : 'common.unknownError',
+        content: 'common.unknownError',
       };
   }
 };
@@ -117,9 +89,7 @@ const Content = React.memo(() => {
   const {
     data: defaultData,
     isSubmitting,
-    isSubmittingWithOidc,
     error,
-    debugLogs,
     step,
   } = useSelector(selectors.selectAuthenticateForm);
 
@@ -149,16 +119,8 @@ const Content = React.memo(() => {
     return initialData;
   });
 
-  const withOidc = !!bootstrap.oidc;
-  const isOidcEnforced = withOidc && bootstrap.oidc.isEnforced;
-  const isOidcDebug = withOidc && bootstrap.oidc.debug;
-
-  const message = useMemo(() => createMessage(error, isOidcDebug), [error, isOidcDebug]);
+  const message = useMemo(() => createMessage(error), [error]);
   const [focusPasswordFieldState, focusPasswordField] = useToggle();
-
-  // Countdown (in seconds) before automatically redirecting to SSO. `null`
-  // means no auto-redirect is pending.
-  const [ssoRedirectSeconds, setSsoRedirectSeconds] = useState(null);
 
   const [emailOrUsernameFieldRef, handleEmailOrUsernameFieldRef] = useNestedRef('inputRef');
   const [passwordFieldRef, handlePasswordFieldRef] = useNestedRef('inputRef');
@@ -182,62 +144,13 @@ const Content = React.memo(() => {
     dispatch(entryActions.authenticate(cleanData));
   }, [dispatch, data, emailOrUsernameFieldRef, passwordFieldRef]);
 
-  const cancelSsoRedirect = useCallback(() => {
-    disableOidcAutoRedirect();
-    setSsoRedirectSeconds(null);
-  }, []);
-
-  const handleFieldChangeWithCancel = useCallback(
-    (...args) => {
-      cancelSsoRedirect();
-      handleFieldChange(...args);
-    },
-    [cancelSsoRedirect, handleFieldChange],
-  );
-
-  const handleAuthenticateWithOidcClick = useCallback(() => {
-    setSsoRedirectSeconds(null);
-    dispatch(entryActions.authenticateWithOidc());
-  }, [dispatch]);
-
   const handleMessageDismiss = useCallback(() => {
     dispatch(entryActions.clearAuthenticateError());
   }, [dispatch]);
 
-  // Kick off the auto-redirect countdown on first load when SSO is available
-  // and hasn't been suppressed this session. Skipped when SSO is enforced
-  // (there is no local account to choose) or an error is already showing.
   useEffect(() => {
-    if (withOidc && !isOidcEnforced && !error && !isOidcAutoRedirectDisabled()) {
-      setSsoRedirectSeconds(OIDC_AUTO_REDIRECT_SECONDS);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Tick the countdown once per second; redirect to SSO when it reaches zero.
-  useEffect(() => {
-    if (ssoRedirectSeconds === null) {
-      return undefined;
-    }
-
-    if (ssoRedirectSeconds <= 0) {
-      disableOidcAutoRedirect();
-      dispatch(entryActions.authenticateWithOidc());
-      return undefined;
-    }
-
-    const timeout = setTimeout(() => {
-      setSsoRedirectSeconds((prev) => (prev === null ? null : prev - 1));
-    }, 1000);
-
-    return () => clearTimeout(timeout);
-  }, [ssoRedirectSeconds, dispatch]);
-
-  useEffect(() => {
-    if (!isOidcEnforced) {
-      emailOrUsernameFieldRef.current.focus();
-    }
-  }, [isOidcEnforced, emailOrUsernameFieldRef]);
+    emailOrUsernameFieldRef.current.focus();
+  }, [emailOrUsernameFieldRef]);
 
   useDidUpdate(() => {
     if (wasSubmitting && !isSubmitting && error) {
@@ -276,7 +189,7 @@ const Content = React.memo(() => {
               <Header
                 as="h1"
                 textAlign="center"
-                content={bootstrap.instanceName || '1Plan Provisioning'}
+                content={bootstrap.instanceName || 'PLANKA'}
                 className={styles.formTitle}
               />
               <Header
@@ -297,89 +210,43 @@ const Content = React.memo(() => {
                   onDismiss={handleMessageDismiss}
                 />
               )}
-              {ssoRedirectSeconds !== null && (
-                <Message info visible className={styles.ssoRedirectMessage}>
-                  <span>
-                    {t('common.redirectingToSsoInSeconds', {
-                      seconds: ssoRedirectSeconds,
-                    })}
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.ssoRedirectCancelButton}
-                    onClick={cancelSsoRedirect}
-                  >
-                    {t('common.useLocalAccount')}
-                  </button>
-                </Message>
-              )}
-              {!isOidcEnforced && (
-                <>
-                  <Form size="large" onSubmit={handleSubmit} onMouseDown={cancelSsoRedirect}>
-                    <div className={styles.inputWrapper}>
-                      <div className={styles.inputLabel}>{t('common.emailOrUsername')}</div>
-                      <Input
-                        fluid
-                        ref={handleEmailOrUsernameFieldRef}
-                        name="emailOrUsername"
-                        value={data.emailOrUsername}
-                        maxLength={256}
-                        readOnly={isSubmitting}
-                        className={styles.input}
-                        onChange={handleFieldChangeWithCancel}
-                      />
-                    </div>
-                    <div className={styles.inputWrapper}>
-                      <div className={styles.inputLabel}>{t('common.password')}</div>
-                      <Input.Password
-                        fluid
-                        ref={handlePasswordFieldRef}
-                        name="password"
-                        value={data.password}
-                        maxLength={256}
-                        readOnly={isSubmitting}
-                        className={styles.input}
-                        onChange={handleFieldChangeWithCancel}
-                      />
-                    </div>
-                    <Form.Button
-                      fluid
-                      primary
-                      icon="right arrow"
-                      labelPosition="right"
-                      content={t('action.logIn')}
-                      loading={isSubmitting}
-                      disabled={isSubmitting || isSubmittingWithOidc}
-                    />
-                  </Form>
-                  {withOidc && (
-                    <Divider horizontal content={t('common.or')} className={styles.divider} />
-                  )}
-                </>
-              )}
-              {withOidc && (
-                <>
-                  <Button
+              <Form size="large" onSubmit={handleSubmit}>
+                <div className={styles.inputWrapper}>
+                  <div className={styles.inputLabel}>{t('common.emailOrUsername')}</div>
+                  <Input
                     fluid
-                    primary={isOidcDebug ? undefined : isOidcEnforced}
-                    color={isOidcDebug ? 'orange' : undefined}
-                    icon={isOidcEnforced ? 'right arrow' : undefined}
-                    labelPosition={isOidcEnforced ? 'right' : undefined}
-                    content={isOidcDebug ? t('action.debugSso') : t('action.logInWithSso')}
-                    loading={isSubmittingWithOidc}
-                    disabled={isSubmitting || isSubmittingWithOidc}
-                    onClick={handleAuthenticateWithOidcClick}
+                    ref={handleEmailOrUsernameFieldRef}
+                    name="emailOrUsername"
+                    value={data.emailOrUsername}
+                    maxLength={256}
+                    readOnly={isSubmitting}
+                    className={styles.input}
+                    onChange={handleFieldChange}
                   />
-                  {debugLogs && (
-                    <TextArea
-                      readOnly
-                      as={TextareaAutosize}
-                      value={debugLogs.join('\n')}
-                      className={styles.debugLog}
-                    />
-                  )}
-                </>
-              )}
+                </div>
+                <div className={styles.inputWrapper}>
+                  <div className={styles.inputLabel}>{t('common.password')}</div>
+                  <Input.Password
+                    fluid
+                    ref={handlePasswordFieldRef}
+                    name="password"
+                    value={data.password}
+                    maxLength={256}
+                    readOnly={isSubmitting}
+                    className={styles.input}
+                    onChange={handleFieldChange}
+                  />
+                </div>
+                <Form.Button
+                  fluid
+                  primary
+                  icon="right arrow"
+                  labelPosition="right"
+                  content={t('action.logIn')}
+                  loading={isSubmitting}
+                  disabled={isSubmitting}
+                />
+              </Form>
             </div>
             <div className={styles.poweredBy}>
               <p className={styles.poweredByText}>
@@ -402,6 +269,7 @@ const Content = React.memo(() => {
         </Grid.Column>
       </Grid>
       {step === AccessTokenSteps.ACCEPT_TERMS && <TermsModal />}
+      {step === AccessTokenSteps.VERIFY_TOTP && <TotpChallengeModal />}
     </div>
   );
 });

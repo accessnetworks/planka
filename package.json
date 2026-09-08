@@ -1,6 +1,6 @@
 {
   "name": "planka",
-  "version": "2.1.1",
+  "version": "2.2.1",
   "private": true,
   "scripts": {
     "client:build": "npm run build --prefix client",
@@ -14,6 +14,7 @@
     "prepare": "husky",
     "server:build": "npm run build --prefix server",
     "server:console": "npm run console --prefix server",
+    "server:db:clean-orphaned-records": "npm run db:clean-orphaned-records --prefix server",
     "server:db:create-admin-user": "npm run db:create-admin-user --prefix server",
     "server:db:init": "npm run db:init --prefix server",
     "server:db:migrate": "npm run db:migrate --prefix server",
@@ -36,7 +37,7 @@
     ]
   },
   "dependencies": {
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.4",
     "genversion": "^3.2.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0"

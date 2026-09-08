@@ -13,6 +13,7 @@ import selectors from '../../../../selectors';
 import { useField, useNestedRef, usePopupInClosableContext } from '../../../../hooks';
 import Item from './Item';
 import AddStep from './AddStep';
+import UserEditModal from '../UserEditModal';
 
 import styles from './UsersPane.module.scss';
 
@@ -21,11 +22,6 @@ const UsersPane = React.memo(() => {
   const activeUsersTotal = useSelector(selectors.selectActiveUsersTotal);
   const users = useSelector(selectors.selectUsers);
 
-  const canAdd = useSelector((state) => {
-    const oidcBootstrap = selectors.selectOidcBootstrap(state);
-    return !oidcBootstrap || !oidcBootstrap.isEnforced;
-  });
-
   const [t] = useTranslation();
 
   const [search, handleSearchChange] = useField('');
@@ -33,6 +29,7 @@ const UsersPane = React.memo(() => {
   const [isDeactivatedVisible, setIsDeactivatedVisible] = useState(false); // TODO: refactor?
 
   const [searchFieldRef, handleSearchFieldRef] = useNestedRef('inputRef');
+  const [editingUserId, setEditingUserId] = useState(null);
 
   const filteredUsers = useMemo(
     () =>
@@ -59,6 +56,10 @@ const UsersPane = React.memo(() => {
   const handleToggleDeactivatedClick = useCallback(() => {
     setIsDeactivatedVisible(!isDeactivatedVisible);
   }, [isDeactivatedVisible]);
+
+  const handleEditClose = useCallback(() => {
+    setEditingUserId(null);
+  }, []);
 
   useEffect(() => {
     searchFieldRef.current.focus();
@@ -91,7 +92,7 @@ const UsersPane = React.memo(() => {
           </Table.Header>
           <Table.Body>
             {filteredUsers.map((user) => (
-              <Item key={user.id} id={user.id} />
+              <Item key={user.id} id={user.id} onEdit={setEditingUserId} />
             ))}
           </Table.Body>
         </Table>
@@ -102,23 +103,22 @@ const UsersPane = React.memo(() => {
           className={styles.toggleDeactivatedButton}
           onClick={handleToggleDeactivatedClick}
         />
-        {canAdd && (
-          <AddPopup>
-            <Button
-              positive
-              disabled={activeUsersLimit !== null && activeUsersTotal >= activeUsersLimit}
-              className={styles.addButton}
-            >
-              {t('action.addUser')}
-              {activeUsersLimit !== null && (
-                <span className={styles.addButtonCounter}>
-                  {activeUsersTotal}/{activeUsersLimit}
-                </span>
-              )}
-            </Button>
-          </AddPopup>
-        )}
+        <AddPopup>
+          <Button
+            positive
+            disabled={activeUsersLimit !== null && activeUsersTotal >= activeUsersLimit}
+            className={styles.addButton}
+          >
+            {t('action.addUser')}
+            {activeUsersLimit !== null && (
+              <span className={styles.addButtonCounter}>
+                {activeUsersTotal}/{activeUsersLimit}
+              </span>
+            )}
+          </Button>
+        </AddPopup>
       </div>
+      {editingUserId && <UserEditModal userId={editingUserId} onClose={handleEditClose} />}
     </Tab.Pane>
   );
 });

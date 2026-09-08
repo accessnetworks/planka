@@ -142,11 +142,27 @@
  *           default: byDefault
  *           description: Default sort order for projects display (personal field)
  *           example: byDefault
- *         isSsoUser:
+ *         autoLogoutMode:
+ *           type: string
+ *           enum: [never, 2m, 5m, 10m, 30m, 12h]
+ *           default: 30m
+ *           description: Auto-logout behavior on inactivity (personal field)
+ *           example: 30m
+ *         isTotpEnabled:
  *           type: boolean
  *           default: false
- *           description: Whether the user is SSO user (private field)
+ *           description: Whether TOTP-based two-factor authentication is enabled (visible only to current user or admin)
  *           example: false
+ *         totpEnabledAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: When TOTP was enabled (visible only to current user or admin)
+ *           example: 2026-05-14T10:00:00.000Z
+ *         totpRecoveryCodesRemaining:
+ *           type: integer
+ *           description: Number of unused recovery codes (visible only to current user or admin)
+ *           example: 10
  *         isDeactivated:
  *           type: boolean
  *           default: false
@@ -238,7 +254,29 @@ const LANGUAGES = [
 ];
 
 // TODO: find better way to handle apiKeyHash and apiKeyCreatedAt
-const PRIVATE_FIELD_NAMES = ['email', 'apiKeyPrefix', 'apiKeyHash', 'isSsoUser', 'apiKeyCreatedAt'];
+const AutoLogoutModes = {
+  NEVER: 'never',
+  MINUTES_2: '2m',
+  MINUTES_5: '5m',
+  MINUTES_10: '10m',
+  MINUTES_30: '30m',
+  HOURS_12: '12h',
+};
+
+const PRIVATE_FIELD_NAMES = [
+  'email',
+  'apiKeyPrefix',
+  'apiKeyHash',
+  'apiKeyCreatedAt',
+  'totpSecret',
+  'totpRecoveryCodes',
+];
+
+const TWO_FACTOR_VISIBLE_FIELD_NAMES = [
+  'isTotpEnabled',
+  'totpEnabledAt',
+  'totpRecoveryCodesRemaining',
+];
 
 const PERSONAL_FIELD_NAMES = [
   'language',
@@ -249,15 +287,11 @@ const PERSONAL_FIELD_NAMES = [
   'defaultEditorMode',
   'defaultHomeView',
   'defaultProjectsOrder',
+  'autoLogoutMode',
 ];
 
 const INTERNAL = {
   id: '_internal',
-  role: Roles.ADMIN,
-};
-
-const OIDC = {
-  id: '_oidc',
   role: Roles.ADMIN,
 };
 
@@ -266,11 +300,12 @@ module.exports = {
   EditorModes,
   HomeViews,
   ProjectOrders,
+  AutoLogoutModes,
   LANGUAGES,
   PRIVATE_FIELD_NAMES,
   PERSONAL_FIELD_NAMES,
+  TWO_FACTOR_VISIBLE_FIELD_NAMES,
   INTERNAL,
-  OIDC,
 
   attributes: {
     //  ╔═╗╦═╗╦╔╦╗╦╔╦╗╦╦  ╦╔═╗╔═╗
@@ -378,11 +413,6 @@ module.exports = {
       allowNull: true,
       columnName: 'terms_signature',
     },
-    isSsoUser: {
-      type: 'boolean',
-      defaultsTo: false,
-      columnName: 'is_sso_user',
-    },
     isDeactivated: {
       type: 'boolean',
       defaultsTo: false,
@@ -399,6 +429,31 @@ module.exports = {
     termsAcceptedAt: {
       type: 'ref',
       columnName: 'terms_accepted_at',
+    },
+    autoLogoutMode: {
+      type: 'string',
+      isIn: Object.values(AutoLogoutModes),
+      defaultsTo: AutoLogoutModes.MINUTES_30,
+      columnName: 'auto_logout_mode',
+    },
+    totpSecret: {
+      type: 'string',
+      isNotEmptyString: true,
+      allowNull: true,
+      columnName: 'totp_secret',
+    },
+    isTotpEnabled: {
+      type: 'boolean',
+      defaultsTo: false,
+      columnName: 'is_totp_enabled',
+    },
+    totpEnabledAt: {
+      type: 'ref',
+      columnName: 'totp_enabled_at',
+    },
+    totpRecoveryCodes: {
+      type: 'json',
+      columnName: 'totp_recovery_codes',
     },
 
     //  ╔═╗╔╦╗╔╗ ╔═╗╔╦╗╔═╗

@@ -10,10 +10,8 @@ import http from './http';
 const createAccessToken = (data, headers) =>
   http.post('/access-tokens?withHttpOnlyToken=true', data, headers);
 
-const exchangeForAccessTokenWithOidc = (data, headers) =>
-  http.post('/access-tokens/exchange-with-oidc?withHttpOnlyToken=true', data, headers);
-
-const debugOidc = (data, headers) => http.post('/access-tokens/debug-oidc', data, headers);
+const verifyTotp = (data, headers) =>
+  http.post('/access-tokens/verify-totp?withHttpOnlyToken=true', data, headers);
 
 // TODO: rename?
 const acceptTerms = (data, headers) => http.post('/access-tokens/accept-terms', data, headers);
@@ -25,8 +23,7 @@ const deleteCurrentAccessToken = (headers) => http.delete('/access-tokens/me', u
 
 export default {
   createAccessToken,
-  exchangeForAccessTokenWithOidc,
-  debugOidc,
+  verifyTotp,
   acceptTerms,
   revokePendingToken,
   deleteCurrentAccessToken,

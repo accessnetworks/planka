@@ -3,10 +3,8 @@
  * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
  */
 
-import { LOCATION_CHANGE_HANDLE } from '../../lib/redux-router';
-
 import ActionTypes from '../../constants/ActionTypes';
-import Paths from '../../constants/Paths';
+import AccessTokenSteps from '../../constants/AccessTokenSteps';
 
 const initialState = {
   data: {
@@ -14,9 +12,7 @@ const initialState = {
     password: '',
   },
   isSubmitting: false,
-  isSubmittingWithOidc: false,
   error: null,
-  debugLogs: null,
   pendingToken: null,
   step: null,
   termsForm: {
@@ -25,20 +21,16 @@ const initialState = {
     isCancelling: false,
     isLanguageUpdating: false,
   },
+  totpForm: {
+    isSubmitting: false,
+    isCancelling: false,
+    error: null,
+  },
 };
 
 // eslint-disable-next-line default-param-last
 export default (state = initialState, { type, payload }) => {
   switch (type) {
-    case LOCATION_CHANGE_HANDLE:
-      if (payload.location.pathname === Paths.OIDC_CALLBACK) {
-        return {
-          ...state,
-          isSubmittingWithOidc: true,
-        };
-      }
-
-      return state;
     case ActionTypes.AUTHENTICATE:
       return {
         ...state,
@@ -49,10 +41,12 @@ export default (state = initialState, { type, payload }) => {
         isSubmitting: true,
       };
     case ActionTypes.AUTHENTICATE__SUCCESS:
-    case ActionTypes.WITH_OIDC_AUTHENTICATE__SUCCESS:
     case ActionTypes.TERMS_ACCEPT__SUCCESS:
     case ActionTypes.TERMS_CANCEL__SUCCESS:
     case ActionTypes.TERMS_CANCEL__FAILURE:
+    case ActionTypes.TOTP_VERIFY__SUCCESS:
+    case ActionTypes.TOTP_CHALLENGE_CANCEL__SUCCESS:
+    case ActionTypes.TOTP_CHALLENGE_CANCEL__FAILURE:
       return initialState;
     case ActionTypes.AUTHENTICATE__FAILURE:
       if (payload.terms) {
@@ -68,35 +62,48 @@ export default (state = initialState, { type, payload }) => {
         };
       }
 
-      return {
-        ...state,
-        isSubmitting: false,
-        error: payload.error,
-      };
-    case ActionTypes.WITH_OIDC_AUTHENTICATE__FAILURE:
-      if (payload.terms) {
+      if (payload.error && payload.error.step === AccessTokenSteps.VERIFY_TOTP) {
         return {
           ...state,
           data: initialState.data,
+          isSubmitting: false,
           pendingToken: payload.error.pendingToken,
           step: payload.error.step,
-          termsForm: {
-            ...state.termsForm,
-            payload: payload.terms,
-          },
+          totpForm: initialState.totpForm,
         };
       }
 
       return {
         ...state,
-        isSubmittingWithOidc: false,
+        isSubmitting: false,
         error: payload.error,
       };
-    case ActionTypes.WITH_OIDC_AUTHENTICATE__DEBUG:
+    case ActionTypes.TOTP_VERIFY:
       return {
         ...state,
-        isSubmittingWithOidc: false,
-        debugLogs: payload.logs,
+        totpForm: {
+          ...state.totpForm,
+          isSubmitting: true,
+          error: null,
+        },
+      };
+    case ActionTypes.TOTP_VERIFY__FAILURE:
+      return {
+        ...state,
+        totpForm: {
+          ...state.totpForm,
+          isSubmitting: false,
+          error: payload.error,
+        },
+      };
+    case ActionTypes.TOTP_CHALLENGE_CANCEL:
+      return {
+        ...state,
+        pendingToken: null,
+        totpForm: {
+          ...state.totpForm,
+          isCancelling: true,
+        },
       };
     case ActionTypes.AUTHENTICATE_ERROR_CLEAR:
       return {
