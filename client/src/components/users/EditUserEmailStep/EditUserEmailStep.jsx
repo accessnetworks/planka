@@ -47,11 +47,12 @@ const EditUserEmailStep = React.memo(({ id, onBack, onClose }) => {
 
   const {
     email,
+    isSsoUser,
     emailUpdateForm: { data: defaultData, isSubmitting, error },
   } = useSelector((state) => selectUserById(state, id));
 
   const withPasswordConfirmation = useSelector(
-    (state) => id === selectors.selectCurrentUserId(state),
+    (state) => id === selectors.selectCurrentUserId(state) && !isSsoUser,
   );
 
   const dispatch = useDispatch();

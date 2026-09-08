@@ -16,6 +16,7 @@ export default {
       poweredByPlanka: 'PLANKA tarafından desteklenmektedir',
       serverConnectionFailed: 'Sunucu bağlantı hatası',
       unknownError: 'Bilinmeyen hata, daha sonra tekrar deneyin',
+      useSingleSignOn: 'Tek oturum açma kullan',
       usernameAlreadyInUse: 'Kullanıcı adı zaten kullanımda',
       whoops_title: 'Hata!',
     },
@@ -23,9 +24,11 @@ export default {
     action: {
       cancelAndClose: 'İptal et ve kapat',
       continue: 'Devam et',
+      debugSso: 'SSO hatalarını ayıkla',
       goBack: 'Geri dön',
       goHome: 'Ana sayfaya git',
       logIn: 'Giriş yap',
+      logInWithSso: 'SSO ile giriş yap',
     },
   },
 };

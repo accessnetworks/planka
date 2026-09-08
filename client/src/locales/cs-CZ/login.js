@@ -17,6 +17,7 @@ export default {
       poweredByPlanka: 'Poháněno technologií <1>PLANKA</1>',
       serverConnectionFailed: 'Připojení k serveru selhalo',
       unknownError: 'Neznámá chyba, zkuste to později',
+      useSingleSignOn: 'Použít jednorázové přihlášení',
       usernameAlreadyInUse: 'Uživatelské jméno se již používá',
       whoops_title: 'Jejda!',
     },
@@ -24,9 +25,11 @@ export default {
     action: {
       cancelAndClose: 'Zrušit a zavřít',
       continue: 'Pokračovat',
+      debugSso: 'Ladit SSO',
       goBack: 'Zpět',
       goHome: 'Domů',
       logIn: 'Přihlásit se',
+      logInWithSso: 'Přihlásit se pomocí SSO',
     },
   },
 };

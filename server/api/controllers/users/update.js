@@ -100,6 +100,10 @@
  *                 enum: [never, 2m, 5m, 10m, 30m, 12h]
  *                 description: Auto-logout behavior on inactivity
  *                 example: 30m
+ *               isSsoUser:
+ *                 type: boolean
+ *                 description: Whether the user is SSO user (only false value to unlink SSO, for admins)
+ *                 example: false
  *               isDeactivated:
  *                 type: boolean
  *                 description: Whether the user account is deactivated and cannot log in (for admins)
@@ -128,6 +132,7 @@
  *         $ref: '#/components/responses/Conflict'
  */
 
+const { is } = require('../../../utils/validators');
 const { idInput } = require('../../../utils/inputs');
 
 const Errors = {
@@ -209,6 +214,10 @@ module.exports = {
       type: 'string',
       isIn: Object.values(User.AutoLogoutModes),
     },
+    isSsoUser: {
+      type: 'boolean',
+      custom: is(false),
+    },
     isDeactivated: {
       type: 'boolean',
     },
@@ -233,7 +242,7 @@ module.exports = {
     if (inputs.id === currentUser.id) {
       availableInputKeys.push(...User.PERSONAL_FIELD_NAMES);
     } else if (currentUser.role === User.Roles.ADMIN) {
-      availableInputKeys.push('role', 'isDeactivated');
+      availableInputKeys.push('role', 'isSsoUser', 'isDeactivated');
     } else {
       throw Errors.USER_NOT_FOUND; // Forbidden
     }
@@ -257,6 +266,14 @@ module.exports = {
       if (inputs.role || inputs.name) {
         throw Errors.NOT_ENOUGH_RIGHTS;
       }
+    } else if (user.isSsoUser) {
+      if (!sails.config.custom.oidcIgnoreRoles && inputs.role) {
+        throw Errors.NOT_ENOUGH_RIGHTS;
+      }
+
+      if (inputs.name) {
+        throw Errors.NOT_ENOUGH_RIGHTS;
+      }
     }
 
     const values = {
@@ -276,6 +293,7 @@ module.exports = {
         'defaultHomeView',
         'defaultProjectsOrder',
         'autoLogoutMode',
+        'isSsoUser',
         'isDeactivated',
       ]),
     };

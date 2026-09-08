@@ -8,7 +8,8 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import classNames from 'classnames';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation, Trans } from 'react-i18next';
-import { Form, Grid, Header, Message } from 'semantic-ui-react';
+import TextareaAutosize from 'react-textarea-autosize';
+import { Button, Divider, Form, Grid, Header, Message, TextArea } from 'semantic-ui-react';
 import { useDidUpdate, usePrevious, useToggle } from '../../../lib/hooks';
 import { Input } from '../../../lib/custom-ui';
 
@@ -24,7 +25,7 @@ import logo from '../../../assets/images/logo.png';
 
 import styles from './Content.module.scss';
 
-const createMessage = (error) => {
+const createMessage = (error, isDebug) => {
   if (!error) {
     return error;
   }
@@ -44,6 +45,11 @@ const createMessage = (error) => {
       return {
         type: 'error',
         content: 'common.invalidPassword',
+      };
+    case 'Use single sign-on':
+      return {
+        type: 'error',
+        content: 'common.useSingleSignOn',
       };
     case 'Admin login required to initialize instance':
       return {
@@ -78,7 +84,7 @@ const createMessage = (error) => {
     default:
       return {
         type: 'warning',
-        content: 'common.unknownError',
+        content: isDebug ? error.message : 'common.unknownError',
       };
   }
 };
@@ -89,7 +95,9 @@ const Content = React.memo(() => {
   const {
     data: defaultData,
     isSubmitting,
+    isSubmittingWithOidc,
     error,
+    debugLogs,
     step,
   } = useSelector(selectors.selectAuthenticateForm);
 
@@ -119,7 +127,11 @@ const Content = React.memo(() => {
     return initialData;
   });
 
-  const message = useMemo(() => createMessage(error), [error]);
+  const withOidc = !!bootstrap.oidc;
+  const isOidcEnforced = withOidc && bootstrap.oidc.isEnforced;
+  const isOidcDebug = withOidc && bootstrap.oidc.debug;
+
+  const message = useMemo(() => createMessage(error, isOidcDebug), [error, isOidcDebug]);
   const [focusPasswordFieldState, focusPasswordField] = useToggle();
 
   const [emailOrUsernameFieldRef, handleEmailOrUsernameFieldRef] = useNestedRef('inputRef');
@@ -144,13 +156,19 @@ const Content = React.memo(() => {
     dispatch(entryActions.authenticate(cleanData));
   }, [dispatch, data, emailOrUsernameFieldRef, passwordFieldRef]);
 
+  const handleAuthenticateWithOidcClick = useCallback(() => {
+    dispatch(entryActions.authenticateWithOidc());
+  }, [dispatch]);
+
   const handleMessageDismiss = useCallback(() => {
     dispatch(entryActions.clearAuthenticateError());
   }, [dispatch]);
 
   useEffect(() => {
-    emailOrUsernameFieldRef.current.focus();
-  }, [emailOrUsernameFieldRef]);
+    if (!isOidcEnforced) {
+      emailOrUsernameFieldRef.current.focus();
+    }
+  }, [isOidcEnforced, emailOrUsernameFieldRef]);
 
   useDidUpdate(() => {
     if (wasSubmitting && !isSubmitting && error) {
@@ -210,43 +228,73 @@ const Content = React.memo(() => {
                   onDismiss={handleMessageDismiss}
                 />
               )}
-              <Form size="large" onSubmit={handleSubmit}>
-                <div className={styles.inputWrapper}>
-                  <div className={styles.inputLabel}>{t('common.emailOrUsername')}</div>
-                  <Input
+              {!isOidcEnforced && (
+                <>
+                  <Form size="large" onSubmit={handleSubmit}>
+                    <div className={styles.inputWrapper}>
+                      <div className={styles.inputLabel}>{t('common.emailOrUsername')}</div>
+                      <Input
+                        fluid
+                        ref={handleEmailOrUsernameFieldRef}
+                        name="emailOrUsername"
+                        value={data.emailOrUsername}
+                        maxLength={256}
+                        readOnly={isSubmitting}
+                        className={styles.input}
+                        onChange={handleFieldChange}
+                      />
+                    </div>
+                    <div className={styles.inputWrapper}>
+                      <div className={styles.inputLabel}>{t('common.password')}</div>
+                      <Input.Password
+                        fluid
+                        ref={handlePasswordFieldRef}
+                        name="password"
+                        value={data.password}
+                        maxLength={256}
+                        readOnly={isSubmitting}
+                        className={styles.input}
+                        onChange={handleFieldChange}
+                      />
+                    </div>
+                    <Form.Button
+                      fluid
+                      primary
+                      icon="right arrow"
+                      labelPosition="right"
+                      content={t('action.logIn')}
+                      loading={isSubmitting}
+                      disabled={isSubmitting || isSubmittingWithOidc}
+                    />
+                  </Form>
+                  {withOidc && (
+                    <Divider horizontal content={t('common.or')} className={styles.divider} />
+                  )}
+                </>
+              )}
+              {withOidc && (
+                <>
+                  <Button
                     fluid
-                    ref={handleEmailOrUsernameFieldRef}
-                    name="emailOrUsername"
-                    value={data.emailOrUsername}
-                    maxLength={256}
-                    readOnly={isSubmitting}
-                    className={styles.input}
-                    onChange={handleFieldChange}
+                    primary={isOidcDebug ? undefined : isOidcEnforced}
+                    color={isOidcDebug ? 'orange' : undefined}
+                    icon={isOidcEnforced ? 'right arrow' : undefined}
+                    labelPosition={isOidcEnforced ? 'right' : undefined}
+                    content={isOidcDebug ? t('action.debugSso') : t('action.logInWithSso')}
+                    loading={isSubmittingWithOidc}
+                    disabled={isSubmitting || isSubmittingWithOidc}
+                    onClick={handleAuthenticateWithOidcClick}
                   />
-                </div>
-                <div className={styles.inputWrapper}>
-                  <div className={styles.inputLabel}>{t('common.password')}</div>
-                  <Input.Password
-                    fluid
-                    ref={handlePasswordFieldRef}
-                    name="password"
-                    value={data.password}
-                    maxLength={256}
-                    readOnly={isSubmitting}
-                    className={styles.input}
-                    onChange={handleFieldChange}
-                  />
-                </div>
-                <Form.Button
-                  fluid
-                  primary
-                  icon="right arrow"
-                  labelPosition="right"
-                  content={t('action.logIn')}
-                  loading={isSubmitting}
-                  disabled={isSubmitting}
-                />
-              </Form>
+                  {debugLogs && (
+                    <TextArea
+                      readOnly
+                      as={TextareaAutosize}
+                      value={debugLogs.join('\n')}
+                      className={styles.debugLog}
+                    />
+                  )}
+                </>
+              )}
             </div>
             <div className={styles.poweredBy}>
               <p className={styles.poweredByText}>

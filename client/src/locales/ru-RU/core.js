@@ -89,6 +89,8 @@ export default {
         'Вы уверены, что хотите удалить этого менеджера из проекта?',
       areYouSureYouWantToRemoveThisMemberFromBoard:
         'Вы уверены, что хотите удалить этого участника из доски?',
+      areYouSureYouWantToUnlinkSsoFromThisUser:
+        'Вы уверены, что хотите отвязать SSO от этого пользователя? Это позволит пользователю входить с помощью пароля.',
       assignAsOwner_title: 'Назначить владельцем',
       atLeastOneListMustBePresent: 'Должен быть хотя бы один список',
       attachment: 'Вложение',
@@ -338,6 +340,7 @@ export default {
       turnOffRecentCardHighlighting: 'Выключить подсветку последних карточек',
       typeNameToConfirm: 'Введите имя для подтверждения.',
       typeTitleToConfirm: 'Введите название для подтверждения.',
+      unlinkSso_title: 'Отвязка SSO',
       unsavedChanges: 'Несохранённые изменения',
       uploadFailedFileIsTooBig: 'Загрузка не удалась: файл слишком большой.',
       uploadFailedNotEnoughStorageSpace: 'Загрузка не удалась: недостаточно места для хранения.',
@@ -506,6 +509,8 @@ export default {
       start: 'Начать',
       stop: 'Остановить',
       subscribe: 'Подписаться',
+      unlinkSso: 'Отвязать SSO',
+      unlinkSso_title: 'Отвязать SSO',
       unsubscribe: 'Отписаться',
       uploadNewAvatar: 'Загрузить новый аватар',
       uploadNewImage: 'Загрузить новое изображение',

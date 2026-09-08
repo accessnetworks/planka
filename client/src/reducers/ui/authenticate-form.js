@@ -3,8 +3,11 @@
  * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
  */
 
+import { LOCATION_CHANGE_HANDLE } from '../../lib/redux-router';
+
 import ActionTypes from '../../constants/ActionTypes';
 import AccessTokenSteps from '../../constants/AccessTokenSteps';
+import Paths from '../../constants/Paths';
 
 const initialState = {
   data: {
@@ -12,7 +15,9 @@ const initialState = {
     password: '',
   },
   isSubmitting: false,
+  isSubmittingWithOidc: false,
   error: null,
+  debugLogs: null,
   pendingToken: null,
   step: null,
   termsForm: {
@@ -31,6 +36,15 @@ const initialState = {
 // eslint-disable-next-line default-param-last
 export default (state = initialState, { type, payload }) => {
   switch (type) {
+    case LOCATION_CHANGE_HANDLE:
+      if (payload.location.pathname === Paths.OIDC_CALLBACK) {
+        return {
+          ...state,
+          isSubmittingWithOidc: true,
+        };
+      }
+
+      return state;
     case ActionTypes.AUTHENTICATE:
       return {
         ...state,
@@ -41,6 +55,7 @@ export default (state = initialState, { type, payload }) => {
         isSubmitting: true,
       };
     case ActionTypes.AUTHENTICATE__SUCCESS:
+    case ActionTypes.WITH_OIDC_AUTHENTICATE__SUCCESS:
     case ActionTypes.TERMS_ACCEPT__SUCCESS:
     case ActionTypes.TERMS_CANCEL__SUCCESS:
     case ActionTypes.TERMS_CANCEL__FAILURE:
@@ -104,6 +119,31 @@ export default (state = initialState, { type, payload }) => {
           ...state.totpForm,
           isCancelling: true,
         },
+      };
+    case ActionTypes.WITH_OIDC_AUTHENTICATE__FAILURE:
+      if (payload.terms) {
+        return {
+          ...state,
+          data: initialState.data,
+          pendingToken: payload.error.pendingToken,
+          step: payload.error.step,
+          termsForm: {
+            ...state.termsForm,
+            payload: payload.terms,
+          },
+        };
+      }
+
+      return {
+        ...state,
+        isSubmittingWithOidc: false,
+        error: payload.error,
+      };
+    case ActionTypes.WITH_OIDC_AUTHENTICATE__DEBUG:
+      return {
+        ...state,
+        isSubmittingWithOidc: false,
+        debugLogs: payload.logs,
       };
     case ActionTypes.AUTHENTICATE_ERROR_CLEAR:
       return {

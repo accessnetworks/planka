@@ -17,6 +17,7 @@ export default {
       poweredByPlanka: 'Покреће <1>PLANKA</1>',
       serverConnectionFailed: 'Неуспешна конекција са сервером',
       unknownError: 'Непозната грешка, покушајте поново касније',
+      useSingleSignOn: 'Користи универзалну пријаву',
       usernameAlreadyInUse: 'Корисничко име је већ у употреби',
       whoops_title: 'Упс!',
     },
@@ -24,9 +25,11 @@ export default {
     action: {
       cancelAndClose: 'Откажи и затвори',
       continue: 'Настави',
+      debugSso: 'Дебагуј SSO',
       goBack: 'Назад',
       goHome: 'Иди кући',
       logIn: 'Пријава',
+      logInWithSso: 'Пријава са УП',
     },
   },
 };

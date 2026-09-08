@@ -8,6 +8,7 @@ const bcrypt = require('bcrypt');
 const buildUserData = () => {
   const data = {
     role: 'admin',
+    isSsoUser: false,
     isDeactivated: false,
   };
 

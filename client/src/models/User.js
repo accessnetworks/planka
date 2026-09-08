@@ -93,6 +93,7 @@ export default class extends BaseModel {
     isTotpEnabled: attr(),
     totpEnabledAt: attr(),
     totpRecoveryCodesRemaining: attr(),
+    isSsoUser: attr(),
     isDeactivated: attr(),
     lockedFieldNames: attr(),
     isAvatarUpdating: attr({

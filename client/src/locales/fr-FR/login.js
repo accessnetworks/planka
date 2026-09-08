@@ -17,6 +17,7 @@ export default {
       poweredByPlanka: 'Propulsé par <1>PLANKA</1>',
       serverConnectionFailed: 'Échec de la connexion au serveur',
       unknownError: 'Erreur inconnue, réessayez plus tard',
+      useSingleSignOn: "Utiliser l'authentification unique",
       usernameAlreadyInUse: "Nom d'utilisateur déjà utilisé",
       whoops_title: 'Oups !',
     },
@@ -24,9 +25,11 @@ export default {
     action: {
       cancelAndClose: 'Annuler et fermer',
       continue: 'Continuer',
+      debugSso: 'Déboguer le SSO',
       goBack: 'Retour',
       goHome: "Aller à l'accueil",
       logIn: 'Se connecter',
+      logInWithSso: "Se connecter avec l'authentification unique",
     },
   },
 };

@@ -53,6 +53,7 @@ export function* handleLocationChange() {
 
   switch (pathsMatch.pattern.path) {
     case Paths.LOGIN:
+    case Paths.OIDC_CALLBACK:
       yield call(goToRoot);
 
       break;

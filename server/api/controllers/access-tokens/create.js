@@ -97,11 +97,12 @@
  *                 message:
  *                   type: string
  *                   enum:
+ *                     - Use single sign-on
  *                     - Terms acceptance required
  *                     - TOTP verification required
  *                     - Admin login required to initialize instance
  *                   description: Specific error message
- *                   example: Terms acceptance required
+ *                   example: Use single sign-on
  *     security: []
  */
 
@@ -119,6 +120,9 @@ const Errors = {
   },
   INVALID_PASSWORD: {
     invalidPassword: 'Invalid password',
+  },
+  USE_SINGLE_SIGN_ON: {
+    useSingleSignOn: 'Use single sign-on',
   },
   TERMS_ACCEPTANCE_REQUIRED: {
     termsAcceptanceRequired: 'Terms acceptance required',
@@ -159,6 +163,9 @@ module.exports = {
     rateLimitExceeded: {
       responseType: 'conflict',
     },
+    useSingleSignOn: {
+      responseType: 'forbidden',
+    },
     termsAcceptanceRequired: {
       responseType: 'forbidden',
     },
@@ -171,6 +178,10 @@ module.exports = {
   },
 
   async fn(inputs) {
+    if (sails.config.custom.oidcEnforced) {
+      throw Errors.USE_SINGLE_SIGN_ON;
+    }
+
     const remoteAddress = getRemoteAddress(this.req);
 
     // Counted before the lookup, so a script cannot make the database do the
@@ -212,6 +223,10 @@ module.exports = {
       throw sails.config.custom.showDetailedAuthErrors
         ? Errors.INVALID_EMAIL_OR_USERNAME
         : Errors.INVALID_CREDENTIALS;
+    }
+
+    if (user.isSsoUser) {
+      throw Errors.USE_SINGLE_SIGN_ON;
     }
 
     const isPasswordValid = await bcrypt.compare(inputs.password, user.password);

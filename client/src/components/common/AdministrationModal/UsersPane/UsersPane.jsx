@@ -22,6 +22,11 @@ const UsersPane = React.memo(() => {
   const activeUsersTotal = useSelector(selectors.selectActiveUsersTotal);
   const users = useSelector(selectors.selectUsers);
 
+  const canAdd = useSelector((state) => {
+    const oidcBootstrap = selectors.selectOidcBootstrap(state);
+    return !oidcBootstrap || !oidcBootstrap.isEnforced;
+  });
+
   const [t] = useTranslation();
 
   const [search, handleSearchChange] = useField('');
@@ -103,20 +108,22 @@ const UsersPane = React.memo(() => {
           className={styles.toggleDeactivatedButton}
           onClick={handleToggleDeactivatedClick}
         />
-        <AddPopup>
-          <Button
-            positive
-            disabled={activeUsersLimit !== null && activeUsersTotal >= activeUsersLimit}
-            className={styles.addButton}
-          >
-            {t('action.addUser')}
-            {activeUsersLimit !== null && (
-              <span className={styles.addButtonCounter}>
-                {activeUsersTotal}/{activeUsersLimit}
-              </span>
-            )}
-          </Button>
-        </AddPopup>
+        {canAdd && (
+          <AddPopup>
+            <Button
+              positive
+              disabled={activeUsersLimit !== null && activeUsersTotal >= activeUsersLimit}
+              className={styles.addButton}
+            >
+              {t('action.addUser')}
+              {activeUsersLimit !== null && (
+                <span className={styles.addButtonCounter}>
+                  {activeUsersTotal}/{activeUsersLimit}
+                </span>
+              )}
+            </Button>
+          </AddPopup>
+        )}
       </div>
       {editingUserId && <UserEditModal userId={editingUserId} onClose={handleEditClose} />}
     </Tab.Pane>

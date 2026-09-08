@@ -163,6 +163,11 @@
  *           type: integer
  *           description: Number of unused recovery codes (visible only to current user or admin)
  *           example: 10
+ *         isSsoUser:
+ *           type: boolean
+ *           default: false
+ *           description: Whether the user is SSO user (private field)
+ *           example: false
  *         isDeactivated:
  *           type: boolean
  *           default: false
@@ -270,6 +275,7 @@ const PRIVATE_FIELD_NAMES = [
   'apiKeyCreatedAt',
   'totpSecret',
   'totpRecoveryCodes',
+  'isSsoUser',
 ];
 
 const TWO_FACTOR_VISIBLE_FIELD_NAMES = [
@@ -295,6 +301,11 @@ const INTERNAL = {
   role: Roles.ADMIN,
 };
 
+const OIDC = {
+  id: '_oidc',
+  role: Roles.ADMIN,
+};
+
 module.exports = {
   Roles,
   EditorModes,
@@ -306,6 +317,7 @@ module.exports = {
   PERSONAL_FIELD_NAMES,
   TWO_FACTOR_VISIBLE_FIELD_NAMES,
   INTERNAL,
+  OIDC,
 
   attributes: {
     //  ╔═╗╦═╗╦╔╦╗╦╔╦╗╦╦  ╦╔═╗╔═╗
@@ -412,6 +424,11 @@ module.exports = {
       isNotEmptyString: true,
       allowNull: true,
       columnName: 'terms_signature',
+    },
+    isSsoUser: {
+      type: 'boolean',
+      defaultsTo: false,
+      columnName: 'is_sso_user',
     },
     isDeactivated: {
       type: 'boolean',

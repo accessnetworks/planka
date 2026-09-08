@@ -17,6 +17,7 @@ export default {
       poweredByPlanka: 'Susținut de <1>PLANKA</1>',
       serverConnectionFailed: 'Conexiunea la server a eșuat',
       unknownError: 'Eroarea necunoscuta, mai incercați',
+      useSingleSignOn: 'Folosiți autentificarea unica',
       usernameAlreadyInUse: 'Nume utilizator deja exista',
       whoops_title: 'Ups!',
     },
@@ -24,9 +25,11 @@ export default {
     action: {
       cancelAndClose: 'Anulează și închide',
       continue: 'Continuă',
+      debugSso: 'Depanează SSO',
       goBack: 'Înapoi',
       goHome: 'Acasă',
       logIn: 'Autentificarea',
+      logInWithSso: 'Autentificarea cu SSO',
     },
   },
 };
