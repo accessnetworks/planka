@@ -152,8 +152,28 @@ module.exports = {
             values,
             actorUser: User.OIDC,
           })
-          .intercept('usernameAlreadyInUse', 'usernameAlreadyInUse')
-          .intercept('activeLimitReached', 'activeLimitReached');
+          .intercept('emailAlreadyInUse', 'emailAlreadyInUse')
+          .intercept('activeLimitReached', 'activeLimitReached')
+          .tolerate('usernameAlreadyInUse');
+
+        // The SSO username is already taken by a different local account.
+        // Username is optional in PLANKA, so rather than blocking the login,
+        // provision the user without one — they still land as a board user and
+        // can pick a username later (subsequent logins keep trying to sync it).
+        if (!user) {
+          sails.log.warn(
+            `OIDC: username "${values.username}" is already in use; ` +
+              `creating user "${values.email}" without a username`,
+          );
+
+          user = await sails.helpers.users.createOne
+            .with({
+              values: _.omit(values, 'username'),
+              actorUser: User.OIDC,
+            })
+            .intercept('emailAlreadyInUse', 'emailAlreadyInUse')
+            .intercept('activeLimitReached', 'activeLimitReached');
+        }
 
         isCreated = true;
       }
@@ -168,10 +188,11 @@ module.exports = {
     if (!isCreated) {
       values.isDeactivated = false;
 
+      // Sync the core identity fields. A conflict here (e.g. the email now
+      // belongs to a different account, or reactivating the user would exceed
+      // the active-users limit) is a genuine problem worth surfacing, so these
+      // stay hard failures. The username is handled separately below.
       const updateFieldKeys = ['email', 'name', 'isSsoUser', 'isDeactivated'];
-      if (!sails.config.custom.oidcIgnoreUsername) {
-        updateFieldKeys.push('username');
-      }
       if (!sails.config.custom.oidcIgnoreRoles) {
         updateFieldKeys.push('role');
       }
@@ -190,8 +211,35 @@ module.exports = {
             actorUser: User.OIDC,
           })
           .intercept('emailAlreadyInUse', 'emailAlreadyInUse')
-          .intercept('usernameAlreadyInUse', 'usernameAlreadyInUse')
           .intercept('activeLimitReached', 'activeLimitReached');
+      }
+
+      // Username sync is best-effort for users that already exist: they must
+      // still be able to sign in even when their SSO username now collides with
+      // another local user's. On a collision, keep their current username
+      // instead of failing the whole login. (A brand-new user is still created
+      // with their SSO username above, where a collision is a real error.)
+      if (
+        !sails.config.custom.oidcIgnoreUsername &&
+        values.username &&
+        values.username.toLowerCase() !== user.username
+      ) {
+        const userWithNewUsername = await sails.helpers.users.updateOne
+          .with({
+            record: user,
+            values: { username: values.username },
+            actorUser: User.OIDC,
+          })
+          .tolerate('usernameAlreadyInUse');
+
+        if (userWithNewUsername) {
+          user = userWithNewUsername;
+        } else {
+          sails.log.warn(
+            `OIDC: username "${values.username}" is already in use; ` +
+              `keeping existing username for user ${user.id}`,
+          );
+        }
       }
     }
 

@@ -4,7 +4,7 @@
  */
 
 import isEmail from 'validator/lib/isEmail';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import classNames from 'classnames';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation, Trans } from 'react-i18next';
@@ -24,6 +24,29 @@ import TotpChallengeModal from './TotpChallengeModal';
 import logo from '../../../assets/images/logo.png';
 
 import styles from './Content.module.scss';
+
+// How long to wait on the login page before redirecting to SSO, giving the
+// user a chance to sign in with a local account instead.
+const OIDC_AUTO_REDIRECT_SECONDS = 3;
+// Session flag that suppresses the auto-redirect (set when the user cancels it
+// or logs out) so it doesn't loop or override an explicit choice.
+const OIDC_AUTO_REDIRECT_DISABLED_KEY = 'oidcAutoRedirectDisabled';
+
+const isOidcAutoRedirectDisabled = () => {
+  try {
+    return !!window.sessionStorage.getItem(OIDC_AUTO_REDIRECT_DISABLED_KEY);
+  } catch {
+    return false;
+  }
+};
+
+const disableOidcAutoRedirect = () => {
+  try {
+    window.sessionStorage.setItem(OIDC_AUTO_REDIRECT_DISABLED_KEY, '1');
+  } catch {
+    /* empty */
+  }
+};
 
 const createMessage = (error, isDebug) => {
   if (!error) {
@@ -134,6 +157,10 @@ const Content = React.memo(() => {
   const message = useMemo(() => createMessage(error, isOidcDebug), [error, isOidcDebug]);
   const [focusPasswordFieldState, focusPasswordField] = useToggle();
 
+  // Countdown (in seconds) before automatically redirecting to SSO. `null`
+  // means no auto-redirect is pending.
+  const [ssoRedirectSeconds, setSsoRedirectSeconds] = useState(null);
+
   const [emailOrUsernameFieldRef, handleEmailOrUsernameFieldRef] = useNestedRef('inputRef');
   const [passwordFieldRef, handlePasswordFieldRef] = useNestedRef('inputRef');
 
@@ -156,13 +183,56 @@ const Content = React.memo(() => {
     dispatch(entryActions.authenticate(cleanData));
   }, [dispatch, data, emailOrUsernameFieldRef, passwordFieldRef]);
 
+  const cancelSsoRedirect = useCallback(() => {
+    disableOidcAutoRedirect();
+    setSsoRedirectSeconds(null);
+  }, []);
+
+  const handleFieldChangeWithCancel = useCallback(
+    (...args) => {
+      cancelSsoRedirect();
+      handleFieldChange(...args);
+    },
+    [cancelSsoRedirect, handleFieldChange],
+  );
+
   const handleAuthenticateWithOidcClick = useCallback(() => {
+    setSsoRedirectSeconds(null);
     dispatch(entryActions.authenticateWithOidc());
   }, [dispatch]);
 
   const handleMessageDismiss = useCallback(() => {
     dispatch(entryActions.clearAuthenticateError());
   }, [dispatch]);
+
+  // Kick off the auto-redirect countdown on first load when SSO is available
+  // and hasn't been suppressed this session. Skipped when SSO is enforced
+  // (there is no local account to choose) or an error is already showing.
+  useEffect(() => {
+    if (withOidc && !isOidcEnforced && !error && !isOidcAutoRedirectDisabled()) {
+      setSsoRedirectSeconds(OIDC_AUTO_REDIRECT_SECONDS);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tick the countdown once per second; redirect to SSO when it reaches zero.
+  useEffect(() => {
+    if (ssoRedirectSeconds === null) {
+      return undefined;
+    }
+
+    if (ssoRedirectSeconds <= 0) {
+      disableOidcAutoRedirect();
+      dispatch(entryActions.authenticateWithOidc());
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => {
+      setSsoRedirectSeconds((prev) => (prev === null ? null : prev - 1));
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [ssoRedirectSeconds, dispatch]);
 
   useEffect(() => {
     if (!isOidcEnforced) {
@@ -207,7 +277,7 @@ const Content = React.memo(() => {
               <Header
                 as="h1"
                 textAlign="center"
-                content={bootstrap.instanceName || 'PLANKA'}
+                content={bootstrap.instanceName || '1Plan Provisioning'}
                 className={styles.formTitle}
               />
               <Header
@@ -228,9 +298,25 @@ const Content = React.memo(() => {
                   onDismiss={handleMessageDismiss}
                 />
               )}
+              {ssoRedirectSeconds !== null && (
+                <Message info visible className={styles.ssoRedirectMessage}>
+                  <span>
+                    {t('common.redirectingToSsoInSeconds', {
+                      seconds: ssoRedirectSeconds,
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.ssoRedirectCancelButton}
+                    onClick={cancelSsoRedirect}
+                  >
+                    {t('common.useLocalAccount')}
+                  </button>
+                </Message>
+              )}
               {!isOidcEnforced && (
                 <>
-                  <Form size="large" onSubmit={handleSubmit}>
+                  <Form size="large" onSubmit={handleSubmit} onMouseDown={cancelSsoRedirect}>
                     <div className={styles.inputWrapper}>
                       <div className={styles.inputLabel}>{t('common.emailOrUsername')}</div>
                       <Input
@@ -241,7 +327,7 @@ const Content = React.memo(() => {
                         maxLength={256}
                         readOnly={isSubmitting}
                         className={styles.input}
-                        onChange={handleFieldChange}
+                        onChange={handleFieldChangeWithCancel}
                       />
                     </div>
                     <div className={styles.inputWrapper}>
@@ -254,7 +340,7 @@ const Content = React.memo(() => {
                         maxLength={256}
                         readOnly={isSubmitting}
                         className={styles.input}
-                        onChange={handleFieldChange}
+                        onChange={handleFieldChangeWithCancel}
                       />
                     </div>
                     <Form.Button
