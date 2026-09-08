@@ -18,7 +18,6 @@ import entryActions from '../../../../entry-actions';
 import { useForm } from '../../../../hooks';
 import { isUsername, isPassword } from '../../../../utils/validator';
 import UserAvatar from '../../../users/UserAvatar';
-import TotpAdminResetModal from './TotpAdminResetModal';
 
 import styles from './ProfilePane.module.scss';
 
@@ -57,7 +56,6 @@ const ProfilePane = React.memo(({ userId }) => {
   const [isUsernameUnlocked, setIsUsernameUnlocked] = useState(!user.username);
   const [isEmailUnlocked, setIsEmailUnlocked] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isTotpResetModalOpen, setIsTotpResetModalOpen] = useState(false);
 
   const defaultInfoData = useMemo(
     () => ({
@@ -468,27 +466,6 @@ const ProfilePane = React.memo(({ userId }) => {
           content={t('action.save')}
         />
       </Form>
-
-      {!isCurrentUser && user.isTotpEnabled && (
-        <>
-          <Divider />
-          <div className={styles.totpResetRow}>
-            <div>
-              <strong>{t('common.twoFactorAuthentication')}</strong>
-              <p className={styles.totpResetHint}>{t('common.reset2faWarning')}</p>
-            </div>
-            <Button
-              negative
-              icon="shield alternate"
-              content={t('action.reset2fa')}
-              onClick={() => setIsTotpResetModalOpen(true)}
-            />
-          </div>
-          {isTotpResetModalOpen && (
-            <TotpAdminResetModal userId={userId} onClose={() => setIsTotpResetModalOpen(false)} />
-          )}
-        </>
-      )}
     </Tab.Pane>
   );
 });

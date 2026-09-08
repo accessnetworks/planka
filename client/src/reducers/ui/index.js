@@ -9,12 +9,10 @@ import authenticateForm from './authenticate-form';
 import userCreateForm from './user-create-form';
 import projectCreateForm from './project-create-form';
 import smtpTestState from './smtp-test-state';
-import userTrustedDevicesState from './user-trusted-devices-state';
 
 export default combineReducers({
   authenticateForm,
   userCreateForm,
   projectCreateForm,
   smtpTestState,
-  userTrustedDevicesState,
 });

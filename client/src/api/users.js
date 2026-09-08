@@ -36,22 +36,6 @@ const updateUserAvatar = (id, data, headers) => http.post(`/users/${id}/avatar`,
 const createUserApiKey = (userId, headers) =>
   socket.post(`/users/${userId}/api-key`, undefined, headers);
 
-const setupUserTotp = (id, data, headers) => socket.post(`/users/${id}/totp/setup`, data, headers);
-
-const enableUserTotp = (id, data, headers) =>
-  socket.post(`/users/${id}/totp/enable`, data, headers);
-
-const disableUserTotp = (id, data, headers) => socket.delete(`/users/${id}/totp`, data, headers);
-
-const regenerateUserTotpRecoveryCodes = (id, data, headers) =>
-  socket.post(`/users/${id}/totp/recovery-codes`, data, headers);
-
-const getUserTrustedDevices = (id, headers) =>
-  socket.get(`/users/${id}/trusted-devices`, undefined, headers);
-
-const deleteUserTrustedDevice = (id, deviceId, headers) =>
-  socket.delete(`/users/${id}/trusted-devices/${deviceId}`, undefined, headers);
-
 const deleteUser = (id, headers) => socket.delete(`/users/${id}`, undefined, headers);
 
 export default {
@@ -65,11 +49,5 @@ export default {
   updateUserUsername,
   updateUserAvatar,
   createUserApiKey,
-  setupUserTotp,
-  enableUserTotp,
-  disableUserTotp,
-  regenerateUserTotpRecoveryCodes,
-  getUserTrustedDevices,
-  deleteUserTrustedDevice,
   deleteUser,
 };

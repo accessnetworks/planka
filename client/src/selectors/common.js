@@ -13,9 +13,6 @@ export const selectOidcBootstrap = (state) => selectBootstrap(state).oidc;
 
 export const selectActiveUsersLimit = (state) => selectBootstrap(state).activeUsersLimit;
 
-export const selectUserTrustedDevicesState = ({ ui: { userTrustedDevicesState } }) =>
-  userTrustedDevicesState;
-
 export const selectAccessToken = ({ auth: { accessToken } }) => accessToken;
 
 export const selectAuthenticateForm = ({ ui: { authenticateForm } }) => authenticateForm;
@@ -32,7 +29,6 @@ export default {
   selectBootstrap,
   selectOidcBootstrap,
   selectActiveUsersLimit,
-  selectUserTrustedDevicesState,
   selectAccessToken,
   selectAuthenticateForm,
   selectUserCreateForm,

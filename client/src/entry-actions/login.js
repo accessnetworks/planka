@@ -41,18 +41,6 @@ const updateTermsLanguage = (value) => ({
   },
 });
 
-const verifyTotp = (data) => ({
-  type: EntryActionTypes.TOTP_VERIFY,
-  payload: {
-    data,
-  },
-});
-
-const cancelTotpChallenge = () => ({
-  type: EntryActionTypes.TOTP_CHALLENGE_CANCEL,
-  payload: {},
-});
-
 export default {
   authenticate,
   authenticateWithOidc,
@@ -60,6 +48,4 @@ export default {
   acceptTerms,
   cancelTerms,
   updateTermsLanguage,
-  verifyTotp,
-  cancelTotpChallenge,
 };

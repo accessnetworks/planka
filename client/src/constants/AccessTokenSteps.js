@@ -5,5 +5,4 @@
 
 export default {
   ACCEPT_TERMS: 'accept-terms',
-  VERIFY_TOTP: 'verify-totp',
 };

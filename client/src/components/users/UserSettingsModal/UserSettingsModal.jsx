@@ -13,7 +13,6 @@ import { useClosableModal } from '../../../hooks';
 import AccountPane from './AccountPane';
 import PreferencesPane from './PreferencesPane';
 import NotificationsPane from './NotificationsPane';
-import SecurityPane from './SecurityPane';
 
 const UserSettingsModal = React.memo(() => {
   const dispatch = useDispatch();
@@ -43,12 +42,6 @@ const UserSettingsModal = React.memo(() => {
         context: 'title',
       }),
       render: () => <NotificationsPane />,
-    },
-    {
-      menuItem: t('common.security', {
-        context: 'title',
-      }),
-      render: () => <SecurityPane />,
     },
   ];
 

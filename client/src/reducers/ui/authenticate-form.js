@@ -6,7 +6,6 @@
 import { LOCATION_CHANGE_HANDLE } from '../../lib/redux-router';
 
 import ActionTypes from '../../constants/ActionTypes';
-import AccessTokenSteps from '../../constants/AccessTokenSteps';
 import Paths from '../../constants/Paths';
 
 const initialState = {
@@ -25,11 +24,6 @@ const initialState = {
     isSubmitting: false,
     isCancelling: false,
     isLanguageUpdating: false,
-  },
-  totpForm: {
-    isSubmitting: false,
-    isCancelling: false,
-    error: null,
   },
 };
 
@@ -59,9 +53,6 @@ export default (state = initialState, { type, payload }) => {
     case ActionTypes.TERMS_ACCEPT__SUCCESS:
     case ActionTypes.TERMS_CANCEL__SUCCESS:
     case ActionTypes.TERMS_CANCEL__FAILURE:
-    case ActionTypes.TOTP_VERIFY__SUCCESS:
-    case ActionTypes.TOTP_CHALLENGE_CANCEL__SUCCESS:
-    case ActionTypes.TOTP_CHALLENGE_CANCEL__FAILURE:
       return initialState;
     case ActionTypes.AUTHENTICATE__FAILURE:
       if (payload.terms) {
@@ -77,48 +68,10 @@ export default (state = initialState, { type, payload }) => {
         };
       }
 
-      if (payload.error && payload.error.step === AccessTokenSteps.VERIFY_TOTP) {
-        return {
-          ...state,
-          data: initialState.data,
-          isSubmitting: false,
-          pendingToken: payload.error.pendingToken,
-          step: payload.error.step,
-          totpForm: initialState.totpForm,
-        };
-      }
-
       return {
         ...state,
         isSubmitting: false,
         error: payload.error,
-      };
-    case ActionTypes.TOTP_VERIFY:
-      return {
-        ...state,
-        totpForm: {
-          ...state.totpForm,
-          isSubmitting: true,
-          error: null,
-        },
-      };
-    case ActionTypes.TOTP_VERIFY__FAILURE:
-      return {
-        ...state,
-        totpForm: {
-          ...state.totpForm,
-          isSubmitting: false,
-          error: payload.error,
-        },
-      };
-    case ActionTypes.TOTP_CHALLENGE_CANCEL:
-      return {
-        ...state,
-        pendingToken: null,
-        totpForm: {
-          ...state.totpForm,
-          isCancelling: true,
-        },
       };
     case ActionTypes.WITH_OIDC_AUTHENTICATE__FAILURE:
       if (payload.terms) {
