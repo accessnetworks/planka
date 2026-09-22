@@ -160,21 +160,26 @@ services:
       - /bin/sh
       - -c
       - |
+        set -o pipefail
+        trap 'exit 0' TERM INT
+        rm -f /backups/*.tmp
         echo "postgres-backup: every $${BACKUP_INTERVAL}s, keeping $${BACKUP_KEEP} dumps in /backups"
         while true; do
           ts=$$(date -u +%Y%m%dT%H%M%SZ)
           out="/backups/planka-$${ts}.sql.gz"
           echo "postgres-backup: dumping to $${out}"
-          if pg_dump --clean --if-exists | gzip -c > "$${out}.tmp"; then
+          # A complete dump ends with this marker; only prune after a good one.
+          if pg_dump --clean --if-exists | gzip -c > "$${out}.tmp" &&
+            gzip -dc "$${out}.tmp" | tail -n 20 | grep -q 'PostgreSQL database dump complete'; then
             mv "$${out}.tmp" "$${out}"
             echo "postgres-backup: wrote $${out}"
+            ls -1t /backups/planka-*.sql.gz 2>/dev/null | tail -n +$$(($${BACKUP_KEEP} + 1)) | xargs -r rm -f
           else
-            echo "postgres-backup: dump FAILED"
+            echo "postgres-backup: dump FAILED, older dumps kept"
             rm -f "$${out}.tmp"
           fi
-          stale=$$(ls -1t /backups/planka-*.sql.gz 2>/dev/null | tail -n +$$(($${BACKUP_KEEP} + 1)))
-          [ -n "$${stale}" ] && echo "$${stale}" | xargs rm -f
-          sleep "$${BACKUP_INTERVAL}"
+          sleep "$${BACKUP_INTERVAL}" &
+          wait $$!
         done
 
 volumes:
