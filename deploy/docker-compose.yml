@@ -1,0 +1,176 @@
+# Production stack for 1Plan Provisioning (this PLANKA fork).
+#
+# Configure everything in deploy/.env (copy .env.example), then from this
+# directory run:
+#
+#   docker compose up -d --build
+#
+# The app image is built from this repository, so it carries the fork's
+# changes (branding, SSO, card locking, ...). Upstream's published image does
+# not. Setup guide: deploy/README.md
+
+name: planka-prod
+
+# Cap each container's log at 5 x 10 MB (Docker keeps logs forever otherwise).
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "5"
+
+services:
+  planka:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: 1plan-planka:latest
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - data:/app/data
+    # No published ports: the app is only reachable through Caddy below.
+    environment:
+      - BASE_URL=https://${PLANKA_DOMAIN:?set PLANKA_DOMAIN in deploy/.env}
+      - DATABASE_URL=postgresql://planka:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}@postgres/planka
+      - SECRET_KEY=${SECRET_KEY:?set SECRET_KEY in deploy/.env}
+
+      # Requests arrive through Caddy. Trusting its X-Forwarded-* headers gives
+      # the app the real client IP (per-IP sign-in rate limiting, session
+      # records) instead of treating every user as the proxy's address.
+      - TRUST_PROXY=true
+
+      # Skip the "accept terms of service" step at login.
+      - TERMS_DISABLED=true
+
+      # SSO through Authentik. Disabled while OIDC_ISSUER is empty. Every SSO
+      # user is created as a board user; Authentik groups never grant more.
+      - OIDC_ISSUER=${OIDC_ISSUER:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - OIDC_SCOPES=${OIDC_SCOPES:-openid email profile}
+      - OIDC_IGNORE_ROLES=true
+
+      - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en-US}
+
+      # The server fetches link favicons, webhooks and notification URLs that
+      # users enter, through a built-in proxy. Block private, loopback and
+      # link-local ranges so nobody can use it to reach machines on the
+      # internal network (or postgres). As a result, links to internal sites
+      # get no favicon and webhooks can't target internal hosts. Don't add
+      # OUTGOING_ALLOWED_* here: any allow rule turns this into deny-all.
+      - OUTGOING_BLOCKED_IPS=0.0.0.0/8,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,100.64.0.0/10,::1/128,fc00::/7,fe80::/10
+
+      # Optional outgoing email (these override the settings in the UI).
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=planka
+      - POSTGRES_USER=planka
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U planka -d planka"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backs up the database AND uploaded files (attachments, avatars,
+  # backgrounds) on startup and then every BACKUP_INTERVAL seconds, into
+  # deploy/backups, keeping the newest BACKUP_KEEP of each. A failed backup
+  # never removes older ones. Files are readable by root only (they contain
+  # live session tokens). Copy that directory off this server regularly.
+  # Restore steps: deploy/README.md
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backups:/backups
+      - data:/data:ro
+    environment:
+      - PGHOST=postgres
+      - PGUSER=planka
+      - PGDATABASE=planka
+      - PGPASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      - BACKUP_INTERVAL=${BACKUP_INTERVAL:-86400}
+      - BACKUP_KEEP=${BACKUP_KEEP:-14}
+    logging: *logging
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        umask 077
+        set -o pipefail
+        trap 'exit 0' TERM INT
+        prune() {
+          ls -1t /backups/planka-$$1-*.gz 2>/dev/null | tail -n +$$(($${BACKUP_KEEP} + 1)) | xargs -r rm -f
+        }
+        rm -f /backups/*.tmp
+        echo "backup: every $${BACKUP_INTERVAL}s, keeping $${BACKUP_KEEP} of each"
+        while true; do
+          ts=$$(date -u +%Y%m%dT%H%M%SZ)
+          db="/backups/planka-db-$${ts}.sql.gz"
+          files="/backups/planka-data-$${ts}.tar.gz"
+          # A complete dump ends with this marker, so a dump cut short is
+          # caught even when gzip itself succeeded.
+          if pg_dump --clean --if-exists | gzip -c > "$${db}.tmp" &&
+            gzip -dc "$${db}.tmp" | tail -n 20 | grep -q 'PostgreSQL database dump complete'; then
+            mv "$${db}.tmp" "$${db}"
+            echo "backup: wrote $${db}"
+            prune db
+          else
+            rm -f "$${db}.tmp"
+            echo "backup: database dump FAILED, older backups kept"
+          fi
+          if tar -czf "$${files}.tmp" -C /data .; then
+            mv "$${files}.tmp" "$${files}"
+            echo "backup: wrote $${files}"
+            prune data
+          else
+            rm -f "$${files}.tmp"
+            echo "backup: file archive FAILED, older backups kept"
+          fi
+          sleep "$${BACKUP_INTERVAL}" &
+          wait $$!
+        done
+
+  caddy:
+    build: ./caddy
+    image: 1plan-caddy-cloudflare:2.11.4
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "80:80" # redirects to https
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    environment:
+      - PLANKA_DOMAIN=${PLANKA_DOMAIN:?set PLANKA_DOMAIN in deploy/.env}
+      - ACME_EMAIL=${ACME_EMAIL:?set ACME_EMAIL in deploy/.env}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:?set CLOUDFLARE_API_TOKEN in deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data # certificates: keep this volume to avoid re-issuing
+      - caddy-config:/config
+    depends_on:
+      - planka
+
+volumes:
+  data:
+  db-data:
+  caddy-data:
+  caddy-config:

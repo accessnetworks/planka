@@ -1,0 +1,32 @@
+{
+	# Let's Encrypt account contact (certificate expiry notices).
+	email {$ACME_EMAIL}
+}
+
+{$PLANKA_DOMAIN} {
+	tls {
+		# DNS-01 challenge through Cloudflare, which hosts the accessnet.works
+		# zone. The server is internal-only, so the usual HTTP challenge can't
+		# reach it (same approach as ravan.accessnet.works).
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+
+		# Don't try to confirm the challenge TXT record ourselves: the internal
+		# DNS that points this hostname at the server's private IP doesn't carry
+		# it, and internal networks often block outbound DNS. Cloudflare publishes
+		# the record within seconds; wait, then let Let's Encrypt check it from
+		# outside.
+		propagation_delay 60s
+		propagation_timeout -1
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	encode zstd gzip
+
+	# Caddy forwards X-Forwarded-For/-Proto/-Host and upgrades websockets
+	# (live board updates) without extra configuration.
+	reverse_proxy planka:1337
+}
